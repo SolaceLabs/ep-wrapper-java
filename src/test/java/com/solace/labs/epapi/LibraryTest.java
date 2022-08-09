@@ -5,6 +5,11 @@ package com.solace.labs.epapi;
 
 import static org.junit.Assert.assertTrue;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.Properties;
+
 import org.junit.Test;
 
 import com.solace.labs.epapi.wrapper.EventPortalClient;
@@ -15,6 +20,15 @@ public class LibraryTest {
     @Test public void testSomeLibraryMethod() {
         
     	
+    	Properties p = new Properties();
+    	try {
+			p.load(new FileInputStream("token.properties"));
+			EventPortalClient.INSTANCE.setToken(p.getProperty("token"));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
     	
     	EventPortalClient.INSTANCE.load();
     	

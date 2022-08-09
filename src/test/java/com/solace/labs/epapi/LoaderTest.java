@@ -1,8 +1,10 @@
 package com.solace.labs.epapi;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.HashSet;
+import java.util.Properties;
 import java.util.Set;
 
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -400,6 +402,15 @@ keySchemaPrimitiveType: null
 
         
 
+    	Properties p = new Properties();
+    	try {
+			p.load(new FileInputStream("token.properties"));
+			EventPortalClient.INSTANCE.setToken(p.getProperty("token"));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
     	EventPortalClient.INSTANCE.load();
     	
         o.println("#####################################");
