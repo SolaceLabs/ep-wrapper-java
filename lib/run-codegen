@@ -1,0 +1,13 @@
+
+java -jar swagger-codegen-cli-3.0.34.jar generate \
+ -l java \
+ -i ~/AaronLee/Downloads/api-docs-v2.json \
+ -o out8 \
+ --invoker-package com.solace.labs.epapi.client \
+ --model-package com.solace.labs.epapi.client.model \
+ --api-package com.solace.labs.epapi.client.api \
+ --group-id com.solace.labs \
+ --artifact-id epapi-client \
+ --artifact-version 0.0.4
+
+
