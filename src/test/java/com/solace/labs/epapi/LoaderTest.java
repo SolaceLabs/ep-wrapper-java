@@ -10,6 +10,7 @@ import java.util.Set;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.MutableTreeNode;
 
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.solace.labs.epapi.client.ApiException;
@@ -23,7 +24,7 @@ import com.solace.labs.epapi.client.model.Event;
 import com.solace.labs.epapi.client.model.EventVersion;
 import com.solace.labs.epapi.client.model.SchemaObject;
 import com.solace.labs.epapi.client.model.SchemaVersion;
-import com.solace.labs.epapi.wrapper.EventPortalClient;
+import com.solace.labs.epapi.wrapper.EventPortalWrapper;
 
 public class LoaderTest {
 
@@ -37,28 +38,28 @@ public class LoaderTest {
     
     public static void calcExternalEvents() {
     	
-    	for (ApplicationDomain domain : EventPortalClient.INSTANCE.getDomains()) {
+    	for (ApplicationDomain domain : EventPortalWrapper.INSTANCE.getDomains()) {
     		System.out.println(domain.getName().toUpperCase());
     		o.println("---------------------------------");
     		Set<String> allProducedEventsVersions = new HashSet<>();
     		Set<String> allConsumedEventsVersions = new HashSet<>();
     		
-    		if (EventPortalClient.INSTANCE.getApplicationsForDomainId(domain.getId()).isEmpty()) continue;  // nothing to see here
-    		for (Application app : EventPortalClient.INSTANCE.getApplicationsForDomainId(domain.getId())) {
-    			if (EventPortalClient.INSTANCE.getApplicationVersionsForApplicationId(app.getId()).isEmpty()) continue;
-    			for (ApplicationVersion appVer : EventPortalClient.INSTANCE.getApplicationVersionsForApplicationId(app.getId())) {
+    		if (EventPortalWrapper.INSTANCE.getApplicationsForDomainId(domain.getId()).isEmpty()) continue;  // nothing to see here
+    		for (Application app : EventPortalWrapper.INSTANCE.getApplicationsForDomainId(domain.getId())) {
+    			if (EventPortalWrapper.INSTANCE.getApplicationVersionsForApplicationId(app.getId()).isEmpty()) continue;
+    			for (ApplicationVersion appVer : EventPortalWrapper.INSTANCE.getApplicationVersionsForApplicationId(app.getId())) {
     				
     				for (String eventVerId : appVer.getDeclaredProducedEventVersionIds()) {
     					allProducedEventsVersions.add(eventVerId);
-    					EventVersion ev = EventPortalClient.INSTANCE.getEventVersion(eventVerId);
-    					Event event = EventPortalClient.INSTANCE.getEvent(ev.getEventId());
-    					ApplicationDomain origDomain = EventPortalClient.INSTANCE.getDomain(event.getApplicationDomainId());
+    					EventVersion ev = EventPortalWrapper.INSTANCE.getEventVersion(eventVerId);
+    					Event event = EventPortalWrapper.INSTANCE.getEvent(ev.getEventId());
+    					ApplicationDomain origDomain = EventPortalWrapper.INSTANCE.getDomain(event.getApplicationDomainId());
     					System.out.printf("%-50s%-30s%-20s%-30s%n", app.getName(), event.getName(), "pub: "+ev.getVersion(), origDomain.getName());
     				}
     				for (String eventVerId : appVer.getDeclaredConsumedEventVersionIds()) {
-    					EventVersion ev = EventPortalClient.INSTANCE.getEventVersion(eventVerId);
-    					Event event = EventPortalClient.INSTANCE.getEvent(ev.getEventId());
-    					ApplicationDomain origDomain = EventPortalClient.INSTANCE.getDomain(event.getApplicationDomainId());
+    					EventVersion ev = EventPortalWrapper.INSTANCE.getEventVersion(eventVerId);
+    					Event event = EventPortalWrapper.INSTANCE.getEvent(ev.getEventId());
+    					ApplicationDomain origDomain = EventPortalWrapper.INSTANCE.getDomain(event.getApplicationDomainId());
     					System.out.printf("%-50s%-30s%-20s%-30s%n", app.getName(), event.getName(), "sub: "+ev.getVersion(), origDomain.getName());
     					allConsumedEventsVersions.add(eventVerId);
     				}
@@ -151,38 +152,38 @@ keySchemaPrimitiveType: null
 //    
     
     public static void drawAppsTable() {
-    	for (ApplicationDomain domain : EventPortalClient.INSTANCE.getDomains()) {  // for all domains...
+    	for (ApplicationDomain domain : EventPortalWrapper.INSTANCE.getDomains()) {  // for all domains...
     		o.printf("DOMAIN '%s': # apps=%d, # events=%d%n", domain.getName(), domain.getStats().getApplicationCount(), domain.getStats().getEventCount());
-    		if (EventPortalClient.INSTANCE.getApplicationsForDomainId(domain.getId()).isEmpty()) {  // no apps in this domain
+    		if (EventPortalWrapper.INSTANCE.getApplicationsForDomainId(domain.getId()).isEmpty()) {  // no apps in this domain
 				o.printf(" |-> no apps defined%n |%n");
     			continue;
     		}
-    		for (Application app : EventPortalClient.INSTANCE.getApplicationsForDomainId(domain.getId())) {  // otherwise, for all apps...
+    		for (Application app : EventPortalWrapper.INSTANCE.getApplicationsForDomainId(domain.getId())) {  // otherwise, for all apps...
     			o.printf(" |-> APP '%s': type=%s, # vers=%d  [%s]%n", app.getName(), app.getApplicationType(), app.getNumberOfVersions(), app.getId());
-    			if (EventPortalClient.INSTANCE.getApplicationVersionsForApplicationId(app.getId()).isEmpty()) {  // if this app has no versions of it defined
+    			if (EventPortalWrapper.INSTANCE.getApplicationVersionsForApplicationId(app.getId()).isEmpty()) {  // if this app has no versions of it defined
     				o.printf(" |    |-> no versions defined%n");
     				continue;
     			}
-    			for (ApplicationVersion appVer : EventPortalClient.INSTANCE.getApplicationVersionsForApplicationId(app.getId())) {
+    			for (ApplicationVersion appVer : EventPortalWrapper.INSTANCE.getApplicationVersionsForApplicationId(app.getId())) {
     				o.printf(" |    |-> ver=%s, state=%s, # pub=%d, # sub=%d  [%s]%n",
     						appVer.getVersion(),
-    						EventPortalClient.INSTANCE.getState(appVer.getStateId()).getName(),
+    						EventPortalWrapper.INSTANCE.getState(appVer.getStateId()).getName(),
     						appVer.getDeclaredProducedEventVersionIds().size(),
     						appVer.getDeclaredConsumedEventVersionIds().size(),
     						appVer.getId());
     				for (String eventVerId : appVer.getDeclaredProducedEventVersionIds()) {  // for all EventVersions this AppVer produces...
-    					EventVersion ev = EventPortalClient.INSTANCE.getEventVersion(eventVerId);
-    					Event event = EventPortalClient.INSTANCE.getEvent(ev.getEventId());
-    					ApplicationDomain origDomain = EventPortalClient.INSTANCE.getDomain(event.getApplicationDomainId());
+    					EventVersion ev = EventPortalWrapper.INSTANCE.getEventVersion(eventVerId);
+    					Event event = EventPortalWrapper.INSTANCE.getEvent(ev.getEventId());
+    					ApplicationDomain origDomain = EventPortalWrapper.INSTANCE.getDomain(event.getApplicationDomainId());
     					// is there a schema for this Event?
-    					if (EventPortalClient.INSTANCE.getSchemaVersion(ev.getSchemaVersionId()) != null) {
-        					SchemaVersion schemaVersion = EventPortalClient.INSTANCE.getSchemaVersion(ev.getSchemaVersionId());
-        					SchemaObject schema = EventPortalClient.INSTANCE.getSchema(schemaVersion.getSchemaId());
+    					if (EventPortalWrapper.INSTANCE.getSchemaVersion(ev.getSchemaVersionId()) != null) {
+        					SchemaVersion schemaVersion = EventPortalWrapper.INSTANCE.getSchemaVersion(ev.getSchemaVersionId());
+        					SchemaObject schema = EventPortalWrapper.INSTANCE.getSchema(schemaVersion.getSchemaId());
         					o.printf(" |    |    |-> PUB EVENT: '%s'%s, v%s, state=%s, broker=%s, topic='%s', schema='%s', type=%s, schema v%s  [%s]  [%s]%n",
         							event.getName(),
         							origDomain.getId().equals(domain.getId()) ? "" : " (EXT)",
         							ev.getVersion(),
-									EventPortalClient.INSTANCE.getState(ev.getStateId()).getName(),
+									EventPortalWrapper.INSTANCE.getState(ev.getStateId()).getName(),
 									ev.getDeliveryDescriptor().getBrokerType(),
 									buildTopic(ev.getDeliveryDescriptor()),
 									schema.getName(),
@@ -195,25 +196,25 @@ keySchemaPrimitiveType: null
         							event.getName(),
         							origDomain.getId().equals(domain.getId()) ? "" : " (EXT)",
 									ev.getVersion(),
-									EventPortalClient.INSTANCE.getState(ev.getStateId()).getName(),
+									EventPortalWrapper.INSTANCE.getState(ev.getStateId()).getName(),
 									ev.getDeliveryDescriptor().getBrokerType(),
 									buildTopic(ev.getDeliveryDescriptor()),
 									eventVerId);
     					}
     				}
     				for (String eventVerId : appVer.getDeclaredConsumedEventVersionIds()) {
-    					EventVersion ev = EventPortalClient.INSTANCE.getEventVersion(eventVerId);
-    					Event event = EventPortalClient.INSTANCE.getEvent(ev.getEventId());
-    					ApplicationDomain origDomain = EventPortalClient.INSTANCE.getDomain(event.getApplicationDomainId());
+    					EventVersion ev = EventPortalWrapper.INSTANCE.getEventVersion(eventVerId);
+    					Event event = EventPortalWrapper.INSTANCE.getEvent(ev.getEventId());
+    					ApplicationDomain origDomain = EventPortalWrapper.INSTANCE.getDomain(event.getApplicationDomainId());
     					// is there a schema for this Event?
-    					if (EventPortalClient.INSTANCE.getSchemaVersion(ev.getSchemaVersionId()) != null) {
-        					SchemaVersion schemaVersion = EventPortalClient.INSTANCE.getSchemaVersion(ev.getSchemaVersionId());
-        					SchemaObject schema = EventPortalClient.INSTANCE.getSchema(schemaVersion.getSchemaId());
+    					if (EventPortalWrapper.INSTANCE.getSchemaVersion(ev.getSchemaVersionId()) != null) {
+        					SchemaVersion schemaVersion = EventPortalWrapper.INSTANCE.getSchemaVersion(ev.getSchemaVersionId());
+        					SchemaObject schema = EventPortalWrapper.INSTANCE.getSchema(schemaVersion.getSchemaId());
         					o.printf(" |    |    |-> SUB EVENT: '%s'%s, v%s, state=%s, broker=%s, topic='%s', schema='%s', type=%s, schema v%s  [%s]  [%s]%n",
         							event.getName(),
         							origDomain.getId().equals(domain.getId()) ? "" : " (EXT)",
         							ev.getVersion(),
-									EventPortalClient.INSTANCE.getState(ev.getStateId()).getName(),
+									EventPortalWrapper.INSTANCE.getState(ev.getStateId()).getName(),
 									ev.getDeliveryDescriptor().getBrokerType(),
 									buildTopic(ev.getDeliveryDescriptor()),
 									schema.getName(),
@@ -226,7 +227,7 @@ keySchemaPrimitiveType: null
         							event.getName(),
         							origDomain.getId().equals(domain.getId()) ? "" : " (EXT)",
 									ev.getVersion(),
-									EventPortalClient.INSTANCE.getState(ev.getStateId()).getName(),
+									EventPortalWrapper.INSTANCE.getState(ev.getStateId()).getName(),
 									ev.getDeliveryDescriptor().getBrokerType(),
 									buildTopic(ev.getDeliveryDescriptor()),
 									eventVerId);
@@ -241,15 +242,15 @@ keySchemaPrimitiveType: null
     
     public static MutableTreeNode drawAppsTree() {
     	DefaultMutableTreeNode root = new DefaultMutableTreeNode();
-    	for (ApplicationDomain domain : EventPortalClient.INSTANCE.getDomains()) {  // for all domains...
+    	for (ApplicationDomain domain : EventPortalWrapper.INSTANCE.getDomains()) {  // for all domains...
     		DefaultMutableTreeNode domainNode = new DefaultMutableTreeNode(domain);
     		root.add(domainNode);
 //    		o.printf("DOMAIN '%s': # apps=%d, # events=%d%n", domain.getName(), domain.getStats().getApplicationCount(), domain.getStats().getEventCount());
-    		for (Application app : EventPortalClient.INSTANCE.getApplicationsForDomainId(domain.getId())) {  // otherwise, for all apps...
+    		for (Application app : EventPortalWrapper.INSTANCE.getApplicationsForDomainId(domain.getId())) {  // otherwise, for all apps...
         		DefaultMutableTreeNode applicationNode = new DefaultMutableTreeNode(app);
         		domainNode.add(applicationNode);
 //    			o.printf(" |-> APP '%s': type=%s, # vers=%d  [%s]%n", app.getName(), app.getApplicationType(), app.getNumberOfVersions(), app.getId());
-    			for (ApplicationVersion appVer : EventPortalClient.INSTANCE.getApplicationVersionsForApplicationId(app.getId())) {
+    			for (ApplicationVersion appVer : EventPortalWrapper.INSTANCE.getApplicationVersionsForApplicationId(app.getId())) {
     	    		DefaultMutableTreeNode appVerNode = new DefaultMutableTreeNode(appVer);
     	    		applicationNode.add(appVerNode);
 //    				o.printf(" |    |-> ver=%s, state=%s, # pub=%d, # sub=%d  [%s]%n",
@@ -259,17 +260,17 @@ keySchemaPrimitiveType: null
 //    						appVer.getDeclaredConsumedEventVersionIds().size(),
 //    						appVer.getId());
     				for (String eventVerId : appVer.getDeclaredProducedEventVersionIds()) {  // for all EventVersions this AppVer produces...
-    					EventVersion ev = EventPortalClient.INSTANCE.getEventVersion(eventVerId);
-    					Event event = EventPortalClient.INSTANCE.getEvent(ev.getEventId());
+    					EventVersion ev = EventPortalWrapper.INSTANCE.getEventVersion(eventVerId);
+    					Event event = EventPortalWrapper.INSTANCE.getEvent(ev.getEventId());
     		    		DefaultMutableTreeNode eventNode = new DefaultMutableTreeNode(event);
     		    		appVerNode.add(eventNode);
     		    		DefaultMutableTreeNode eventVerNode = new DefaultMutableTreeNode(ev);
     		    		eventNode.add(eventVerNode);
 //    					ApplicationDomain origDomain = EventPortalClient.INSTANCE.getDomain(event.getApplicationDomainId());
     					// is there a schema for this Event?
-    					if (EventPortalClient.INSTANCE.getSchemaVersion(ev.getSchemaVersionId()) != null) {
-        					SchemaVersion schemaVersion = EventPortalClient.INSTANCE.getSchemaVersion(ev.getSchemaVersionId());
-        					SchemaObject schema = EventPortalClient.INSTANCE.getSchema(schemaVersion.getSchemaId());
+    					if (EventPortalWrapper.INSTANCE.getSchemaVersion(ev.getSchemaVersionId()) != null) {
+        					SchemaVersion schemaVersion = EventPortalWrapper.INSTANCE.getSchemaVersion(ev.getSchemaVersionId());
+        					SchemaObject schema = EventPortalWrapper.INSTANCE.getSchema(schemaVersion.getSchemaId());
         		    		DefaultMutableTreeNode schemaNode = new DefaultMutableTreeNode(schema);
         		    		eventVerNode.add(schemaNode);
         		    		DefaultMutableTreeNode schemaVerNode = new DefaultMutableTreeNode(schemaVersion);
@@ -289,17 +290,17 @@ keySchemaPrimitiveType: null
     					}
     				}
     				for (String eventVerId : appVer.getDeclaredConsumedEventVersionIds()) {
-    					EventVersion ev = EventPortalClient.INSTANCE.getEventVersion(eventVerId);
-    					Event event = EventPortalClient.INSTANCE.getEvent(ev.getEventId());
+    					EventVersion ev = EventPortalWrapper.INSTANCE.getEventVersion(eventVerId);
+    					Event event = EventPortalWrapper.INSTANCE.getEvent(ev.getEventId());
     		    		DefaultMutableTreeNode eventNode = new DefaultMutableTreeNode(event);
     		    		appVerNode.add(eventNode);
     		    		DefaultMutableTreeNode eventVerNode = new DefaultMutableTreeNode(ev);
     		    		eventNode.add(eventVerNode);
 //    					ApplicationDomain origDomain = EventPortalClient.INSTANCE.getDomain(event.getApplicationDomainId());
     					// is there a schema for this Event?
-    					if (EventPortalClient.INSTANCE.getSchemaVersion(ev.getSchemaVersionId()) != null) {
-        					SchemaVersion schemaVersion = EventPortalClient.INSTANCE.getSchemaVersion(ev.getSchemaVersionId());
-        					SchemaObject schema = EventPortalClient.INSTANCE.getSchema(schemaVersion.getSchemaId());
+    					if (EventPortalWrapper.INSTANCE.getSchemaVersion(ev.getSchemaVersionId()) != null) {
+        					SchemaVersion schemaVersion = EventPortalWrapper.INSTANCE.getSchemaVersion(ev.getSchemaVersionId());
+        					SchemaObject schema = EventPortalWrapper.INSTANCE.getSchema(schemaVersion.getSchemaId());
         		    		DefaultMutableTreeNode schemaNode = new DefaultMutableTreeNode(schema);
         		    		eventVerNode.add(schemaNode);
         		    		DefaultMutableTreeNode schemaVerNode = new DefaultMutableTreeNode(schemaVersion);
@@ -315,28 +316,28 @@ keySchemaPrimitiveType: null
 
     
     public static void drawEventsTable() {
-    	for (ApplicationDomain domain : EventPortalClient.INSTANCE.getDomains()) {  // for all domains...
+    	for (ApplicationDomain domain : EventPortalWrapper.INSTANCE.getDomains()) {  // for all domains...
     		o.printf("DOMAIN '%s': # apps=%d, # events=%d%n",
     				domain.getName(),
     				domain.getStats().getApplicationCount(),
     				domain.getStats().getEventCount());
-    		if (EventPortalClient.INSTANCE.getEventsForDomainId(domain.getId()).isEmpty()) {  // no events in this domain
+    		if (EventPortalWrapper.INSTANCE.getEventsForDomainId(domain.getId()).isEmpty()) {  // no events in this domain
 				o.printf(" |-> no events defined%n |%n");
     			continue;
     		}
-    		for (Event event : EventPortalClient.INSTANCE.getEventsForDomainId(domain.getId())) {  // otherwise, for all events...
+    		for (Event event : EventPortalWrapper.INSTANCE.getEventsForDomainId(domain.getId())) {  // otherwise, for all events...
     			o.printf(" |-> EVENT '%s': # vers=%d  [%s]%n", event.getName(), event.getNumberOfVersions(), event.getId());
-    			if (EventPortalClient.INSTANCE.getEventVersionsForEventId(event.getId()).isEmpty()) {  // if this event has no versions of it defined
+    			if (EventPortalWrapper.INSTANCE.getEventVersionsForEventId(event.getId()).isEmpty()) {  // if this event has no versions of it defined
     				o.printf(" |    |-> no versions defined%n");
     				continue;
     			}
-    			for (EventVersion ev : EventPortalClient.INSTANCE.getEventVersionsForEventId(event.getId())) {
-					if (EventPortalClient.INSTANCE.getSchemaVersion(ev.getSchemaVersionId()) != null) {
-    					SchemaVersion schemaVersion = EventPortalClient.INSTANCE.getSchemaVersion(ev.getSchemaVersionId());
-    					SchemaObject schema = EventPortalClient.INSTANCE.getSchema(schemaVersion.getSchemaId());
+    			for (EventVersion ev : EventPortalWrapper.INSTANCE.getEventVersionsForEventId(event.getId())) {
+					if (EventPortalWrapper.INSTANCE.getSchemaVersion(ev.getSchemaVersionId()) != null) {
+    					SchemaVersion schemaVersion = EventPortalWrapper.INSTANCE.getSchemaVersion(ev.getSchemaVersionId());
+    					SchemaObject schema = EventPortalWrapper.INSTANCE.getSchema(schemaVersion.getSchemaId());
     					o.printf(" |    |-> v%s, state=%s, broker=%s, topic='%s', sch name='%s', type=%s, schema v%s  [%s]  [%s]%n",
     							ev.getVersion(),
-								EventPortalClient.INSTANCE.getState(ev.getStateId()).getName(),
+								EventPortalWrapper.INSTANCE.getState(ev.getStateId()).getName(),
 								ev.getDeliveryDescriptor().getBrokerType(),
 								buildTopic(ev.getDeliveryDescriptor()),
 								schema.getName(),
@@ -347,7 +348,7 @@ keySchemaPrimitiveType: null
 					} else {
     					o.printf(" |    |-> v%s, state=%s, broker=%s, topic='%s', schema=not defined  [%s]%n",
 								ev.getVersion(),
-								EventPortalClient.INSTANCE.getState(ev.getStateId()).getName(),
+								EventPortalWrapper.INSTANCE.getState(ev.getStateId()).getName(),
 								ev.getDeliveryDescriptor().getBrokerType(),
 								buildTopic(ev.getDeliveryDescriptor()),
 								event.getId());
@@ -359,15 +360,15 @@ keySchemaPrimitiveType: null
     }
 
     public static void drawSchemasTable() {
-    	for (ApplicationDomain domain : EventPortalClient.INSTANCE.getDomains()) {  // for all domains...
+    	for (ApplicationDomain domain : EventPortalWrapper.INSTANCE.getDomains()) {  // for all domains...
     		o.printf("DOMAIN '%s': # schemas=%d%n",
     				domain.getName(),
     				domain.getStats().getSchemaCount());
-    		if (EventPortalClient.INSTANCE.getSchemasForDomainId(domain.getId()).isEmpty()) {  // no schemas in this domain
+    		if (EventPortalWrapper.INSTANCE.getSchemasForDomainId(domain.getId()).isEmpty()) {  // no schemas in this domain
 				o.printf(" |-> no schemas defined%n |%n");
     			continue;
     		}
-    		for (SchemaObject schema : EventPortalClient.INSTANCE.getSchemasForDomainId(domain.getId())) {  // otherwise, for all schemas...
+    		for (SchemaObject schema : EventPortalWrapper.INSTANCE.getSchemasForDomainId(domain.getId())) {  // otherwise, for all schemas...
     			o.printf(" |-> SCHEMA '%s':  type=%s, content=%s, # vers=%d, # events using=%d  [%s]%n",
     					schema.getName(),
     					schema.getSchemaType(),
@@ -376,14 +377,14 @@ keySchemaPrimitiveType: null
     					schema.getEventVersionRefCount(),
     					schema.getId());
     			
-    			if (EventPortalClient.INSTANCE.getSchemaVersionsForSchemaId(schema.getId()).isEmpty()) {  // if this schema has no versions of it defined
+    			if (EventPortalWrapper.INSTANCE.getSchemaVersionsForSchemaId(schema.getId()).isEmpty()) {  // if this schema has no versions of it defined
     				o.printf(" |    |-> no versions defined%n");
     				continue;
     			}
-    			for (SchemaVersion schemaVersion : EventPortalClient.INSTANCE.getSchemaVersionsForSchemaId(schema.getId())) {
+    			for (SchemaVersion schemaVersion : EventPortalWrapper.INSTANCE.getSchemaVersionsForSchemaId(schema.getId())) {
 					o.printf(" |    |-> v%s, state=%s, length=%d  [%s]%n",
 							schemaVersion.getVersion(),
-							EventPortalClient.INSTANCE.getState(schemaVersion.getStateId()).getName(),
+							EventPortalWrapper.INSTANCE.getState(schemaVersion.getStateId()).getName(),
 							schemaVersion.getContent().length(),
 							schemaVersion.getId());
     			}
@@ -395,26 +396,23 @@ keySchemaPrimitiveType: null
     
     
     
-
-    @Test
-    public void testLoader() throws ApiException, IOException {
-
-
-        
-
+	@BeforeClass public static void load() {
     	Properties p = new Properties();
     	try {
 			p.load(new FileInputStream("token.properties"));
-			EventPortalClient.INSTANCE.setToken(p.getProperty("token"));
+			EventPortalWrapper.INSTANCE.setToken(p.getProperty("token"));
+			EventPortalWrapper.INSTANCE.load();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			throw new RuntimeException(e);
 		}
-    	EventPortalClient.INSTANCE.load();
-    	
-        o.println("#####################################");
+	}
+    
+    
 
+    @Test
+    public void testLoader() throws ApiException, IOException {
+        o.println("#####################################");
         calcExternalEvents();
         o.println("#####################################");
         drawAppsTable();
@@ -422,12 +420,8 @@ keySchemaPrimitiveType: null
         drawEventsTable();
         o.println("#####################################");
         drawSchemasTable();
-
-        
         o.println("#####################################");
         MutableTreeNode node = drawAppsTree();
-
-
     }
 }
 

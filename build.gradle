@@ -14,7 +14,7 @@ plugins {
 }
 
 repositories {
-    jcenter()
+    mavenCentral()
     flatDir {
         dirs 'lib'
     }
@@ -38,3 +38,16 @@ dependencies {
     // This dependency is used internally, and not exposed to consumers on their own compile classpath.
     implementation 'com.google.guava:guava:29.0-jre'
 }
+
+
+jar {
+    archiveBaseName = rootProject.name
+    archiveVersion = '0.0.3'
+    manifest {
+        attributes 'Created-By': 'Aaron Lee',
+                   'Implementation-Title': 'Solace Event Portal Swagger Wrapper',
+                   'Implementation-Version': '0.0.3'
+    }
+}
+
+

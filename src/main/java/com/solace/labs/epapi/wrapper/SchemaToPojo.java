@@ -50,7 +50,7 @@ public class SchemaToPojo {
 		}
 		
 		public Builder setEventVersionId(String eventVersionId) {
-			EventVersion eventVersion = EventPortalClient.INSTANCE.getEventVersion(eventVersionId);
+			EventVersion eventVersion = EventPortalWrapper.INSTANCE.getEventVersion(eventVersionId);
 			return this.setSchemaVersionId(eventVersion.getSchemaVersionId());
 		}
 		
@@ -58,9 +58,9 @@ public class SchemaToPojo {
 			this.schemaVersionId = schemaVersionId;
 //			if (!smartUpdate) return this;
 			// else...
-	    	SchemaVersion schemaVersion = EventPortalClient.INSTANCE.getSchemaVersion(schemaVersionId);
+	    	SchemaVersion schemaVersion = EventPortalWrapper.INSTANCE.getSchemaVersion(schemaVersionId);
 	    	if (schemaVersion == null) throw new IllegalArgumentException("Cannot find schema version "+schemaVersionId);
-	    	SchemaObject schema = EventPortalClient.INSTANCE.getSchema(schemaVersion.getSchemaId());
+	    	SchemaObject schema = EventPortalWrapper.INSTANCE.getSchema(schemaVersion.getSchemaId());
 	    	className = schema.getName();
 	    	if (className == null || className.isEmpty()) {
 	    		className = "Test";
@@ -156,7 +156,7 @@ public class SchemaToPojo {
 //    	URL source = Example.class.getResource("/schema/required.json");
     	SchemaMapper mapper = new SchemaMapper(new RuleFactory(config, new Jackson2Annotator(config), new SchemaStore()), new SchemaGenerator());
 //    	SchemaMapper mapper = new SchemaMapper(new RuleFactory(config, new GsonAnnotator(config), new SchemaStore()), new SchemaGenerator());
-    	mapper.generate(codeModel, builder.getClassName(), packageName, EventPortalClient.INSTANCE.getSchemaVersion(builder.getSchemaVersionId()).getContent());
+    	mapper.generate(codeModel, builder.getClassName(), packageName, EventPortalWrapper.INSTANCE.getSchemaVersion(builder.getSchemaVersionId()).getContent());
     	
     	File location = new File(builder.getFilePath());
     	location.mkdirs();
