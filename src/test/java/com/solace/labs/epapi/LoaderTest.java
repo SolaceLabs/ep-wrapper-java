@@ -165,8 +165,9 @@ keySchemaPrimitiveType: null
     				continue;
     			}
     			for (ApplicationVersion appVer : EventPortalWrapper.INSTANCE.getApplicationVersionsForApplicationId(app.getId())) {
-    				o.printf(" |    |-> ver=%s, state=%s, # pub=%d, # sub=%d  [%s]%n",
+    				o.printf(" |    |-> ver=%s (%s), state=%s, # pub=%d, # sub=%d  [%s]%n",
     						appVer.getVersion(),
+    						appVer.getDisplayName(),
     						EventPortalWrapper.INSTANCE.getState(appVer.getStateId()).getName(),
     						appVer.getDeclaredProducedEventVersionIds().size(),
     						appVer.getDeclaredConsumedEventVersionIds().size(),
@@ -343,15 +344,26 @@ keySchemaPrimitiveType: null
 								schema.getName(),
 								schema.getSchemaType(),
 								schemaVersion.getVersion(),
-								event.getId(),
+								ev.getId(),
 								schemaVersion.getId());
+					} else if (ev.getSchemaPrimitiveType() != null) {
+						ev.getDeliveryDescriptor().getKeySchemaPrimitiveType();
+						ev.getDeliveryDescriptor().getKeySchemaVersionId();
+    					o.printf(" |    |-> v%s, state=%s, broker=%s, topic='%s', schema=%s  [%s]%n",
+								ev.getVersion(),
+								EventPortalWrapper.INSTANCE.getState(ev.getStateId()).getName(),
+								ev.getDeliveryDescriptor().getBrokerType(),
+								buildTopic(ev.getDeliveryDescriptor()),
+								ev.getSchemaPrimitiveType(),
+								ev.getId());
+    					
 					} else {
     					o.printf(" |    |-> v%s, state=%s, broker=%s, topic='%s', schema=not defined  [%s]%n",
 								ev.getVersion(),
 								EventPortalWrapper.INSTANCE.getState(ev.getStateId()).getName(),
 								ev.getDeliveryDescriptor().getBrokerType(),
 								buildTopic(ev.getDeliveryDescriptor()),
-								event.getId());
+								ev.getId());
 					}
     			}
     		}
@@ -382,15 +394,49 @@ keySchemaPrimitiveType: null
     				continue;
     			}
     			for (SchemaVersion schemaVersion : EventPortalWrapper.INSTANCE.getSchemaVersionsForSchemaId(schema.getId())) {
-					o.printf(" |    |-> v%s, state=%s, length=%d  [%s]%n",
+					o.printf(" |    |-> v%s, state=%s, length=%d, referredBy=%d  [%s]%n",
 							schemaVersion.getVersion(),
 							EventPortalWrapper.INSTANCE.getState(schemaVersion.getStateId()).getName(),
-							schemaVersion.getContent().length(),
+							(schemaVersion.getContent() == null ? 0 : schemaVersion.getContent().length()),
+							(schemaVersion.getReferencedByEventVersionIds() == null ? 0 : schemaVersion.getReferencedByEventVersionIds().size()),
 							schemaVersion.getId());
+					if (schemaVersion.getReferencedByEventVersionIds() == null) continue;
+					for (String eventVerId : schemaVersion.getReferencedByEventVersionIds()) {
+						EventVersion eventVersion = EventPortalWrapper.INSTANCE.getEventVersion(eventVerId);
+						if (eventVersion == null) continue;  // shouldn't happen!
+    					Event event = EventPortalWrapper.INSTANCE.getEvent(eventVersion.getEventId());
+    					ApplicationDomain origDomain = EventPortalWrapper.INSTANCE.getDomain(event.getApplicationDomainId());
+
+    					o.printf(" |    |    |-> USED BY EVENT: '%s'%s, v%s, state=%s, broker=%s, topic='%s'  [%s]%n",
+    							event.getName(),
+    							origDomain.getId().equals(domain.getId()) ? "" : " (EXT)",
+    									eventVersion.getVersion(),
+								EventPortalWrapper.INSTANCE.getState(eventVersion.getStateId()).getName(),
+								eventVersion.getDeliveryDescriptor().getBrokerType(),
+								buildTopic(eventVersion.getDeliveryDescriptor()),
+								eventVerId);
+					}
+					
+					
+					
     			}
     		}
     		System.out.println(" |");
     	}
+    }
+    
+    
+    public static void test1(String eventVerId) {
+    	
+    	EventVersion ev = EventPortalWrapper.INSTANCE.getEventVersion(eventVerId);
+    	Event event = EventPortalWrapper.INSTANCE.getEvent(ev.getEventId());
+    	o.println(event.getName() + " v" + ev.getVersion());
+    	System.out.println(ev.getSchemaVersionId());
+    	o.println(ev.getSchemaPrimitiveType());
+    	o.println(ev.getDeliveryDescriptor());
+    	o.println(ev.getDeliveryDescriptor().getKeySchemaVersionId());
+    	o.println(ev.getDeliveryDescriptor().getKeySchemaPrimitiveType());
+    	o.println();
     }
 
     
@@ -401,7 +447,7 @@ keySchemaPrimitiveType: null
     	try {
 			p.load(new FileInputStream("token.properties"));
 			EventPortalWrapper.INSTANCE.setToken(p.getProperty("token"));
-			EventPortalWrapper.INSTANCE.load();
+			EventPortalWrapper.INSTANCE.loadRefresh();
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);
@@ -414,14 +460,31 @@ keySchemaPrimitiveType: null
     public void testLoader() throws ApiException, IOException {
         o.println("#####################################");
         calcExternalEvents();
+        o.println();
+        o.println();
         o.println("#####################################");
         drawAppsTable();
+        o.println();
+        o.println();
         o.println("#####################################");
         drawEventsTable();
+        o.println();
+        o.println();
         o.println("#####################################");
         drawSchemasTable();
+        o.println();
+        o.println();
         o.println("#####################################");
         MutableTreeNode node = drawAppsTree();
+        node.getChildCount();
+        
+        
+        test1("kdcce3vxdup");
+        test1("9imb4qc38rh");
+        test1("a7gf2ygh07z");
+        
+        
+        
     }
 }
 
