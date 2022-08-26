@@ -185,7 +185,7 @@ public enum EventPortalWrapper {
         if (!loadEventApisInfo()) return false;
         if (!loadConsumersInfo()) return false;
         if (!loadOtherInfo()) return false;
-        System.out.println("EventPortalClient LOADED: " + (System.currentTimeMillis()-start) + "ms with PAGE_SIZE == " + PAGE_SIZE);
+        System.out.println("EventPortalWrapper LOADED: " + (System.currentTimeMillis()-start) + "ms with PAGE_SIZE == " + PAGE_SIZE);
         loadStatus = LoadStatus.LOADED;
         lastRefresh = System.currentTimeMillis();
         return true;
@@ -241,7 +241,7 @@ public enum EventPortalWrapper {
     	}
     }
     
-    private boolean loadApplicationsInfo() {
+    public boolean loadApplicationsInfo() {
         ApiClient apiClient = getApiClient();
     	try {
 	    	long start = System.currentTimeMillis();
@@ -286,7 +286,7 @@ public enum EventPortalWrapper {
     	}
     }
     
-    private boolean loadEventsInfo() {
+    public boolean loadEventsInfo() {
         ApiClient apiClient = getApiClient();
     	try {
 	    	eventsById = new LinkedHashMap<>();
@@ -331,7 +331,7 @@ public enum EventPortalWrapper {
     	}
     }
     
-    private boolean loadSchemaInfo() {
+    public boolean loadSchemaInfo() {
         ApiClient apiClient = getApiClient();
     	try {
 	    	long start = System.currentTimeMillis();
@@ -388,7 +388,7 @@ public enum EventPortalWrapper {
     	}
     }
     
-    private boolean loadEventApisInfo() {
+    public boolean loadEventApisInfo() {
         ApiClient apiClient = getApiClient();
     	try {
 	    	long start = System.currentTimeMillis();
@@ -434,7 +434,7 @@ public enum EventPortalWrapper {
     }
 
     
-    private boolean loadConsumersInfo() {
+    public boolean loadConsumersInfo() {
         ApiClient apiClient = getApiClient();
     	try {
 	    	long start = System.currentTimeMillis();
@@ -464,7 +464,7 @@ public enum EventPortalWrapper {
     }
 
     
-    private boolean loadOtherInfo() {
+    public boolean loadOtherInfo() {
         ApiClient apiClient = getApiClient();
     	try {
 	    	long start = System.currentTimeMillis();
@@ -717,5 +717,4 @@ public enum EventPortalWrapper {
 		}
 		return appDescs;
 	}
-	
 }
