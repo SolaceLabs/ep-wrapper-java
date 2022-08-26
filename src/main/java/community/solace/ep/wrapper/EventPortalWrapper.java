@@ -153,19 +153,10 @@ public enum EventPortalWrapper {
 			return false;
 		}
 		loadStatus = LoadStatus.LOADING;
-	    long start = System.currentTimeMillis();
+//	    long start = System.currentTimeMillis();
         
-	  	ApiClient apiClient = Configuration.getDefaultApiClient();
-        apiClient.setBasePath("http://api.solace.cloud");
-        apiClient.setAccessToken(token);
 		Runnable domains = () -> {
-			try {
-				loadDomainsInfo(apiClient);
-			} catch (ApiException e) {
-	    		e.printStackTrace();
-	            loadStatus = LoadStatus.ERROR;
-	            loadException = e;
-			}
+			loadDomainsInfo();
 		};
 		pool.submit(domains);
 		
@@ -175,45 +166,29 @@ public enum EventPortalWrapper {
     
 
 
-	public boolean loadRefresh() {
+	public boolean loadAll() {
 		if (loadStatus == LoadStatus.LOADING) {
 			return false;
 		}
 		loadStatus = LoadStatus.LOADING;
 	    long start = System.currentTimeMillis();
-        
-	  	ApiClient apiClient = Configuration.getDefaultApiClient();
-        apiClient.setBasePath("http://api.solace.cloud");
-        apiClient.setAccessToken(token);
-        
-    	try {
-	        loadDomainsInfo(apiClient);
+        if (!loadDomainsInfo()) return false;
 //	        if (domains.size() == 0) {
 //	        	loadStatus = LoadStatus.ERROR;
 //	        	IllegalStateException e = new IllegalStateException("Something wrong with loading, no domains loaded!");
 //	        	loadException = e;
 //	        	return false;
 //	        }
-	        loadApplicationsInfo(apiClient);
-	        loadEventsInfo(apiClient);
-	        loadSchemaInfo(apiClient);
-	        loadEventApisInfo(apiClient);
-	        loadConsumersInfo(apiClient);
-	        loadOtherInfo(apiClient);
-            System.out.println("EventPortalClient LOADED: " + (System.currentTimeMillis()-start) + "ms with PAGE_SIZE == " + PAGE_SIZE);
-            loadStatus = LoadStatus.LOADED;
-            lastRefresh = System.currentTimeMillis();
-	        return true;
-    	} catch (ApiException e) {
-    		e.printStackTrace();
-            loadStatus = LoadStatus.ERROR;
-            loadException = e;
-    		return false;
-    	}
-	}
-	
-	public void refresh() {
-		
+        if (loadApplicationsInfo()) return false;
+        if (loadEventsInfo()) return false;
+        if (loadSchemaInfo()) return false;
+        if (loadEventApisInfo()) return false;
+        if (loadConsumersInfo()) return false;
+        if (loadOtherInfo()) return false;
+        System.out.println("EventPortalClient LOADED: " + (System.currentTimeMillis()-start) + "ms with PAGE_SIZE == " + PAGE_SIZE);
+        loadStatus = LoadStatus.LOADED;
+        lastRefresh = System.currentTimeMillis();
+        return true;
 	}
 	
     private void afterLoadingTests() {
@@ -235,213 +210,282 @@ public enum EventPortalWrapper {
 
     }
     
-    
-    
-    private void loadDomainsInfo(ApiClient apiClient) throws ApiException {
-    	long start = System.currentTimeMillis();
-        ApplicationDomainsApi apiDomains = new ApplicationDomainsApi(apiClient);
-        ApplicationDomainsResponse response;
-        int page = 1;
-        do {
-        	response = apiDomains.getApplicationDomains(PAGE_SIZE, page++, null, null, Collections.singletonList("stats"));
-        	for (ApplicationDomain domain : response.getData()) {
-        		domains.put(domain.getId(), domain);
-        	}
-        } while (((Map<?, ?>)response.getMeta().get("pagination")).get("nextPage") != null);
-        System.out.printf("getDomainsInfo() took %dms.%n", System.currentTimeMillis() - start);
+    private ApiClient getApiClient() {
+	  	ApiClient apiClient = Configuration.getDefaultApiClient();
+        apiClient.setBasePath("http://api.solace.cloud");
+        apiClient.setAccessToken(token);
+        return apiClient;
     }
     
-    private void loadApplicationsInfo(ApiClient apiClient) throws ApiException {
-    	long start = System.currentTimeMillis();
-    	applicationsById = new LinkedHashMap<>();
-    	applicationsByDomainId = new LinkedHashMap<>();
-        ApplicationsApi apiApps = new ApplicationsApi(apiClient);
-        int page = 1;
-        ApplicationsResponse response2;
-        do {
-        	response2 = apiApps.getApplications(PAGE_SIZE, page++, null, null, null, null, null);
-        	for (Application app : response2.getData()) {
-        		applicationsById.put(app.getId(), app);
-        		if (applicationsByDomainId.get(app.getApplicationDomainId()) == null) {
-        			applicationsByDomainId.put(app.getApplicationDomainId(), new HashSet<>());
-        		}
-        		applicationsByDomainId.get(app.getApplicationDomainId()).add(app);
-        	}
-        } while (((Map<?, ?>)response2.getMeta().get("pagination")).get("nextPage") != null);
-        
-        // app versions
-        applicationVersionsById = new LinkedHashMap<>();
-        applicationVersionsByApplicatoinId = new LinkedHashMap<>();
-        ApplicationVersionsResponse response3;
-        page = 1;
-        do {
-        	response3 = apiApps.getApplicationVersions(PAGE_SIZE, page++, null);
-            for (ApplicationVersion appVer : response3.getData()) {
-            	applicationVersionsById.put(appVer.getId(), appVer);
-            	if (applicationVersionsByApplicatoinId.get(appVer.getApplicationId()) == null) {
-            		applicationVersionsByApplicatoinId.put(appVer.getApplicationId(), new HashSet<>());
-            	}
-            	applicationVersionsByApplicatoinId.get(appVer.getApplicationId()).add(appVer);
-            }
-        } while (((Map<?, ?>)response3.getMeta().get("pagination")).get("nextPage") != null);
-        System.out.printf("getApplicationsInfo() took %dms.%n", System.currentTimeMillis() - start);
-    }
     
-    private void loadEventsInfo(ApiClient apiClient) throws ApiException {
-    	eventsById = new LinkedHashMap<>();
-    	eventsByDomainId = new LinkedHashMap<>();
-    	long start = System.currentTimeMillis();
-        EventsApi eventsApi = new EventsApi(apiClient);
-        EventsResponse eventsReponse;
-        int page = 1;
-        do {
-        	eventsReponse = eventsApi.getEvents(PAGE_SIZE, page++, null, null, null, null, null, null);
-	        for (Event event : eventsReponse.getData()) {
-	        	eventsById.put(event.getId(), event);
-	        	if (eventsByDomainId.get(event.getApplicationDomainId()) == null) {
-	        		eventsByDomainId.put(event.getApplicationDomainId(), new HashSet<>());
+    public boolean loadDomainsInfo() {
+        ApiClient apiClient = getApiClient();
+    	try {
+    		long start = System.currentTimeMillis();
+	        ApplicationDomainsApi apiDomains = new ApplicationDomainsApi(apiClient);
+	        ApplicationDomainsResponse response;
+	        int page = 1;
+	        do {
+	        	response = apiDomains.getApplicationDomains(PAGE_SIZE, page++, null, null, Collections.singletonList("stats"));
+	        	for (ApplicationDomain domain : response.getData()) {
+	        		domains.put(domain.getId(), domain);
 	        	}
-	        	eventsByDomainId.get(event.getApplicationDomainId()).add(event);
-	        }
-        } while (((Map<?, ?>)eventsReponse.getMeta().get("pagination")).get("nextPage") != null);
-    	
-        // event versions
-        eventVersionsById = new LinkedHashMap<>();
-        eventVersionsByEventId = new LinkedHashMap<>();
-        EventVersionsResponse eventVersionsResponse;
-        page = 1;
-        do {
-        	eventVersionsResponse = eventsApi.getEventVersions(PAGE_SIZE, page++, null);
-        	for (EventVersion eventVersion : eventVersionsResponse.getData()) {
-        		eventVersionsById.put(eventVersion.getId(), eventVersion);
-        		if (eventVersionsByEventId.get(eventVersion.getEventId()) == null) {
-        			eventVersionsByEventId.put(eventVersion.getEventId(), new HashSet<>());
-        		}
-        		eventVersionsByEventId.get(eventVersion.getEventId()).add(eventVersion);
-        	}
-        } while (((Map<?, ?>)eventVersionsResponse.getMeta().get("pagination")).get("nextPage") != null);
-        System.out.printf("getEventsInfo() took %dms.%n", System.currentTimeMillis() - start);
+	        } while (((Map<?, ?>)response.getMeta().get("pagination")).get("nextPage") != null);
+	        System.out.printf("getDomainsInfo() took %dms.%n", System.currentTimeMillis() - start);
+	        return true;
+    	} catch (ApiException e) {
+    		e.printStackTrace();
+            loadStatus = LoadStatus.ERROR;
+            loadException = e;
+    		return false;
+    	}
     }
     
-    private void loadSchemaInfo(ApiClient apiClient) throws ApiException {
-    	long start = System.currentTimeMillis();
-    	schemasById = new LinkedHashMap<>();
-    	schemasByDomainId = new LinkedHashMap<>();
-        SchemasApi schemasApi = new SchemasApi(apiClient);
-        SchemasResponse schemasReponse;
-        int page = 1;
-        do {
-        	schemasReponse = schemasApi.getSchemas(PAGE_SIZE, page++, null, null, null, null, null, null);
-	        for (SchemaObject schema : schemasReponse.getData()) {
-	        	schemasById.put(schema.getId(), schema);
-	        	if (schemasByDomainId.get(schema.getApplicationDomainId()) == null) {
-	        		schemasByDomainId.put(schema.getApplicationDomainId(), new HashSet<>());
+    private boolean loadApplicationsInfo() {
+        ApiClient apiClient = getApiClient();
+    	try {
+	    	long start = System.currentTimeMillis();
+	    	applicationsById = new LinkedHashMap<>();
+	    	applicationsByDomainId = new LinkedHashMap<>();
+	        ApplicationsApi apiApps = new ApplicationsApi(apiClient);
+	        int page = 1;
+	        ApplicationsResponse response2;
+	        do {
+	        	response2 = apiApps.getApplications(PAGE_SIZE, page++, null, null, null, null, null);
+	        	for (Application app : response2.getData()) {
+	        		applicationsById.put(app.getId(), app);
+	        		if (applicationsByDomainId.get(app.getApplicationDomainId()) == null) {
+	        			applicationsByDomainId.put(app.getApplicationDomainId(), new HashSet<>());
+	        		}
+	        		applicationsByDomainId.get(app.getApplicationDomainId()).add(app);
 	        	}
-	        	schemasByDomainId.get(schema.getApplicationDomainId()).add(schema);
-	        }
-        } while (((Map<?, ?>)schemasReponse.getMeta().get("pagination")).get("nextPage") != null);
-        
-        // schemas versions
-        schemaVersionsById = new LinkedHashMap<>();
-        schemaVersionsBySchemaId = new LinkedHashMap<>();
-
-        SchemaVersionsResponse schemaVersionsResponse;
-        page = 1;
-        do {
-        	schemaVersionsResponse = schemasApi.getSchemaVersions(PAGE_SIZE, page++, null);
-        	for (SchemaVersion schemaVersion : schemaVersionsResponse.getData()) {
-        		schemaVersionsById.put(schemaVersion.getId(), schemaVersion);
-        		if (schemaVersionsBySchemaId.get(schemaVersion.getSchemaId()) == null) {
-        			schemaVersionsBySchemaId.put(schemaVersion.getSchemaId(), new HashSet<>());
-        		}
-        		schemaVersionsBySchemaId.get(schemaVersion.getSchemaId()).add(schemaVersion);
-        	}
-        } while (((Map<?, ?>)schemaVersionsResponse.getMeta().get("pagination")).get("nextPage") != null);
-
-        // hacky way of doing this, but not correct b/c this only finds schemas that are being used by events
-//        for (String eventVersionId : eventVersionsById.keySet()) {
-//        	if (eventVersionsById.get(eventVersionId).getSchemaVersionId() == null) continue;
-//        	SchemaVersion schemaVersion = schemasApi.getSchemaVersion(eventVersionsById.get(eventVersionId).getSchemaVersionId()).getData();
-//        	schemaVersionsById.put(schemaVersion.getId(), schemaVersion);
-//    		if (schemaVersionsBySchemaId.get(schemaVersion.getSchemaId()) == null) {
-//    			schemaVersionsBySchemaId.put(schemaVersion.getSchemaId(), new HashSet<>());
-//    		}
-//    		schemaVersionsBySchemaId.get(schemaVersion.getSchemaId()).add(schemaVersion);
-//        }
-        System.out.printf("getSchemaInfo() took %dms.%n", System.currentTimeMillis() - start);
+	        } while (((Map<?, ?>)response2.getMeta().get("pagination")).get("nextPage") != null);
+	        
+	        // app versions
+	        applicationVersionsById = new LinkedHashMap<>();
+	        applicationVersionsByApplicatoinId = new LinkedHashMap<>();
+	        ApplicationVersionsResponse response3;
+	        page = 1;
+	        do {
+	        	response3 = apiApps.getApplicationVersions(PAGE_SIZE, page++, null);
+	            for (ApplicationVersion appVer : response3.getData()) {
+	            	applicationVersionsById.put(appVer.getId(), appVer);
+	            	if (applicationVersionsByApplicatoinId.get(appVer.getApplicationId()) == null) {
+	            		applicationVersionsByApplicatoinId.put(appVer.getApplicationId(), new HashSet<>());
+	            	}
+	            	applicationVersionsByApplicatoinId.get(appVer.getApplicationId()).add(appVer);
+	            }
+	        } while (((Map<?, ?>)response3.getMeta().get("pagination")).get("nextPage") != null);
+	        System.out.printf("getApplicationsInfo() took %dms.%n", System.currentTimeMillis() - start);
+    		return true;
+    	} catch (ApiException e) {
+    		e.printStackTrace();
+            loadStatus = LoadStatus.ERROR;
+            loadException = e;
+    		return false;
+    	}
     }
     
-    private void loadEventApisInfo(ApiClient apiClient) throws ApiException {
-    	long start = System.currentTimeMillis();
-    	eventApisById = new LinkedHashMap<>();
-    	eventApisByDomainId = new LinkedHashMap<>();
-        EventApIsApi eventApisApi = new EventApIsApi(apiClient);
-        EventApisResponse eventApisReponse;
-        int page = 1;
-        do {
-        	eventApisReponse = eventApisApi.getEventApis(PAGE_SIZE, page++, null, null, null, null, null, null, null);
-	        for (EventApi eventApi : eventApisReponse.getData()) {
-	        	eventApisById.put(eventApi.getId(), eventApi);
-	        	if (eventApisByDomainId.get(eventApi.getApplicationDomainId()) == null) {
-	        		eventApisByDomainId.put(eventApi.getApplicationDomainId(), new HashSet<>());
+    private boolean loadEventsInfo() {
+        ApiClient apiClient = getApiClient();
+    	try {
+	    	eventsById = new LinkedHashMap<>();
+	    	eventsByDomainId = new LinkedHashMap<>();
+	    	long start = System.currentTimeMillis();
+	        EventsApi eventsApi = new EventsApi(apiClient);
+	        EventsResponse eventsReponse;
+	        int page = 1;
+	        do {
+	        	eventsReponse = eventsApi.getEvents(PAGE_SIZE, page++, null, null, null, null, null, null);
+		        for (Event event : eventsReponse.getData()) {
+		        	eventsById.put(event.getId(), event);
+		        	if (eventsByDomainId.get(event.getApplicationDomainId()) == null) {
+		        		eventsByDomainId.put(event.getApplicationDomainId(), new HashSet<>());
+		        	}
+		        	eventsByDomainId.get(event.getApplicationDomainId()).add(event);
+		        }
+	        } while (((Map<?, ?>)eventsReponse.getMeta().get("pagination")).get("nextPage") != null);
+	    	
+	        // event versions
+	        eventVersionsById = new LinkedHashMap<>();
+	        eventVersionsByEventId = new LinkedHashMap<>();
+	        EventVersionsResponse eventVersionsResponse;
+	        page = 1;
+	        do {
+	        	eventVersionsResponse = eventsApi.getEventVersions(PAGE_SIZE, page++, null);
+	        	for (EventVersion eventVersion : eventVersionsResponse.getData()) {
+	        		eventVersionsById.put(eventVersion.getId(), eventVersion);
+	        		if (eventVersionsByEventId.get(eventVersion.getEventId()) == null) {
+	        			eventVersionsByEventId.put(eventVersion.getEventId(), new HashSet<>());
+	        		}
+	        		eventVersionsByEventId.get(eventVersion.getEventId()).add(eventVersion);
 	        	}
-	        	eventApisByDomainId.get(eventApi.getApplicationDomainId()).add(eventApi);
-	        }
-        } while (eventApisReponse.getMeta().getPagination().getNextPage() != null);
-        
-        // event API versions
-        eventApiVersionsById = new LinkedHashMap<>();
-        eventApiVersionsByEventApiId = new LinkedHashMap<>();
-        EventApiVersionsResponse eventApiVersionsResponse;
-        page = 1;
-        do {
-        	eventApiVersionsResponse = eventApisApi.getEventApiVersions(PAGE_SIZE, page++, null, null, null);
-        	for (EventApiVersion eventApiVersion : eventApiVersionsResponse.getData()) {
-        		eventApiVersionsById.put(eventApiVersion.getId(), eventApiVersion);
-        		if (eventApiVersionsByEventApiId.get(eventApiVersion.getEventApiId()) == null) {
-        			eventApiVersionsByEventApiId.put(eventApiVersion.getEventApiId(), new HashSet<>());
-        		}
-        		eventApiVersionsByEventApiId.get(eventApiVersion.getEventApiId()).add(eventApiVersion);
-        	}
-        } while (eventApisReponse.getMeta().getPagination().getNextPage() != null);
-        System.out.printf("loadEventApisInfo() took %dms.%n", System.currentTimeMillis() - start);
+	        } while (((Map<?, ?>)eventVersionsResponse.getMeta().get("pagination")).get("nextPage") != null);
+	        System.out.printf("getEventsInfo() took %dms.%n", System.currentTimeMillis() - start);
+    		return true;
+    	} catch (ApiException e) {
+    		e.printStackTrace();
+            loadStatus = LoadStatus.ERROR;
+            loadException = e;
+    		return false;
+    	}
     }
-
     
-    private void loadConsumersInfo(ApiClient apiClient) throws ApiException {
-    	long start = System.currentTimeMillis();
-    	consumersById = new LinkedHashMap<>();
-    	consumersByApplicationVersionId = new LinkedHashMap<>();
-    	ConsumersApi consumersApi = new ConsumersApi(apiClient);
-        ConsumersResponse consumersReponse;
-        int page = 1;
-        do {
-        	consumersReponse = consumersApi.getConsumers(PAGE_SIZE, page++, null, null);
-	        for (Consumer consumer : consumersReponse.getData()) {
-	        	consumersById.put(consumer.getId(), consumer);
-	        	if (consumersByApplicationVersionId.get(consumer.getApplicationVersionId()) == null) {
-	        		consumersByApplicationVersionId.put(consumer.getApplicationVersionId(), new HashSet<>());
+    private boolean loadSchemaInfo() {
+        ApiClient apiClient = getApiClient();
+    	try {
+	    	long start = System.currentTimeMillis();
+	    	schemasById = new LinkedHashMap<>();
+	    	schemasByDomainId = new LinkedHashMap<>();
+	        SchemasApi schemasApi = new SchemasApi(apiClient);
+	        SchemasResponse schemasReponse;
+	        int page = 1;
+	        do {
+	        	schemasReponse = schemasApi.getSchemas(PAGE_SIZE, page++, null, null, null, null, null, null);
+		        for (SchemaObject schema : schemasReponse.getData()) {
+		        	schemasById.put(schema.getId(), schema);
+		        	if (schemasByDomainId.get(schema.getApplicationDomainId()) == null) {
+		        		schemasByDomainId.put(schema.getApplicationDomainId(), new HashSet<>());
+		        	}
+		        	schemasByDomainId.get(schema.getApplicationDomainId()).add(schema);
+		        }
+	        } while (((Map<?, ?>)schemasReponse.getMeta().get("pagination")).get("nextPage") != null);
+	        
+	        // schemas versions
+	        schemaVersionsById = new LinkedHashMap<>();
+	        schemaVersionsBySchemaId = new LinkedHashMap<>();
+	
+	        SchemaVersionsResponse schemaVersionsResponse;
+	        page = 1;
+	        do {
+	        	schemaVersionsResponse = schemasApi.getSchemaVersions(PAGE_SIZE, page++, null);
+	        	for (SchemaVersion schemaVersion : schemaVersionsResponse.getData()) {
+	        		schemaVersionsById.put(schemaVersion.getId(), schemaVersion);
+	        		if (schemaVersionsBySchemaId.get(schemaVersion.getSchemaId()) == null) {
+	        			schemaVersionsBySchemaId.put(schemaVersion.getSchemaId(), new HashSet<>());
+	        		}
+	        		schemaVersionsBySchemaId.get(schemaVersion.getSchemaId()).add(schemaVersion);
 	        	}
-	        	consumersByApplicationVersionId.get(consumer.getApplicationVersionId()).add(consumer);
-	        }
-        } while (((Map<?, ?>)consumersReponse.getMeta().get("pagination")).get("nextPage") != null);
-        System.out.printf("loadConsumersInfo() took %dms.%n", System.currentTimeMillis() - start);
+	        } while (((Map<?, ?>)schemaVersionsResponse.getMeta().get("pagination")).get("nextPage") != null);
+	
+	        // hacky way of doing this, but not correct b/c this only finds schemas that are being used by events
+	//        for (String eventVersionId : eventVersionsById.keySet()) {
+	//        	if (eventVersionsById.get(eventVersionId).getSchemaVersionId() == null) continue;
+	//        	SchemaVersion schemaVersion = schemasApi.getSchemaVersion(eventVersionsById.get(eventVersionId).getSchemaVersionId()).getData();
+	//        	schemaVersionsById.put(schemaVersion.getId(), schemaVersion);
+	//    		if (schemaVersionsBySchemaId.get(schemaVersion.getSchemaId()) == null) {
+	//    			schemaVersionsBySchemaId.put(schemaVersion.getSchemaId(), new HashSet<>());
+	//    		}
+	//    		schemaVersionsBySchemaId.get(schemaVersion.getSchemaId()).add(schemaVersion);
+	//        }
+	        System.out.printf("getSchemaInfo() took %dms.%n", System.currentTimeMillis() - start);
+    		return true;
+    	} catch (ApiException e) {
+    		e.printStackTrace();
+            loadStatus = LoadStatus.ERROR;
+            loadException = e;
+    		return false;
+    	}
+    }
+    
+    private boolean loadEventApisInfo() {
+        ApiClient apiClient = getApiClient();
+    	try {
+	    	long start = System.currentTimeMillis();
+	    	eventApisById = new LinkedHashMap<>();
+	    	eventApisByDomainId = new LinkedHashMap<>();
+	        EventApIsApi eventApisApi = new EventApIsApi(apiClient);
+	        EventApisResponse eventApisReponse;
+	        int page = 1;
+	        do {
+	        	eventApisReponse = eventApisApi.getEventApis(PAGE_SIZE, page++, null, null, null, null, null, null, null);
+		        for (EventApi eventApi : eventApisReponse.getData()) {
+		        	eventApisById.put(eventApi.getId(), eventApi);
+		        	if (eventApisByDomainId.get(eventApi.getApplicationDomainId()) == null) {
+		        		eventApisByDomainId.put(eventApi.getApplicationDomainId(), new HashSet<>());
+		        	}
+		        	eventApisByDomainId.get(eventApi.getApplicationDomainId()).add(eventApi);
+		        }
+	        } while (eventApisReponse.getMeta().getPagination().getNextPage() != null);
+	        
+	        // event API versions
+	        eventApiVersionsById = new LinkedHashMap<>();
+	        eventApiVersionsByEventApiId = new LinkedHashMap<>();
+	        EventApiVersionsResponse eventApiVersionsResponse;
+	        page = 1;
+	        do {
+	        	eventApiVersionsResponse = eventApisApi.getEventApiVersions(PAGE_SIZE, page++, null, null, null);
+	        	for (EventApiVersion eventApiVersion : eventApiVersionsResponse.getData()) {
+	        		eventApiVersionsById.put(eventApiVersion.getId(), eventApiVersion);
+	        		if (eventApiVersionsByEventApiId.get(eventApiVersion.getEventApiId()) == null) {
+	        			eventApiVersionsByEventApiId.put(eventApiVersion.getEventApiId(), new HashSet<>());
+	        		}
+	        		eventApiVersionsByEventApiId.get(eventApiVersion.getEventApiId()).add(eventApiVersion);
+	        	}
+	        } while (eventApisReponse.getMeta().getPagination().getNextPage() != null);
+	        System.out.printf("loadEventApisInfo() took %dms.%n", System.currentTimeMillis() - start);
+    		return true;
+    	} catch (ApiException e) {
+    		e.printStackTrace();
+            loadStatus = LoadStatus.ERROR;
+            loadException = e;
+    		return false;
+    	}
     }
 
     
-    private void loadOtherInfo(ApiClient apiClient) throws ApiException {
-    	long start = System.currentTimeMillis();
-    	// states
-    	statesById = new LinkedHashMap<>();
-        StatesApi statesApi = new StatesApi(apiClient);
-        StatesResponse statesResponse = statesApi.getStates();
-        for (StateDTO state : statesResponse.getData()) {
-        	statesById.put(state.getId(), state);
-        }
-        
-        // level separator
-        
-        System.out.printf("getOtherInfo() took %dms.%n", System.currentTimeMillis() - start);
+    private boolean loadConsumersInfo() {
+        ApiClient apiClient = getApiClient();
+    	try {
+	    	long start = System.currentTimeMillis();
+	    	consumersById = new LinkedHashMap<>();
+	    	consumersByApplicationVersionId = new LinkedHashMap<>();
+	    	ConsumersApi consumersApi = new ConsumersApi(apiClient);
+	        ConsumersResponse consumersReponse;
+	        int page = 1;
+	        do {
+	        	consumersReponse = consumersApi.getConsumers(PAGE_SIZE, page++, null, null);
+		        for (Consumer consumer : consumersReponse.getData()) {
+		        	consumersById.put(consumer.getId(), consumer);
+		        	if (consumersByApplicationVersionId.get(consumer.getApplicationVersionId()) == null) {
+		        		consumersByApplicationVersionId.put(consumer.getApplicationVersionId(), new HashSet<>());
+		        	}
+		        	consumersByApplicationVersionId.get(consumer.getApplicationVersionId()).add(consumer);
+		        }
+	        } while (((Map<?, ?>)consumersReponse.getMeta().get("pagination")).get("nextPage") != null);
+	        System.out.printf("loadConsumersInfo() took %dms.%n", System.currentTimeMillis() - start);
+    		return true;
+    	} catch (ApiException e) {
+    		e.printStackTrace();
+            loadStatus = LoadStatus.ERROR;
+            loadException = e;
+    		return false;
+    	}
+    }
+
+    
+    private boolean loadOtherInfo() {
+        ApiClient apiClient = getApiClient();
+    	try {
+	    	long start = System.currentTimeMillis();
+	    	// states
+	    	statesById = new LinkedHashMap<>();
+	        StatesApi statesApi = new StatesApi(apiClient);
+	        StatesResponse statesResponse = statesApi.getStates();
+	        for (StateDTO state : statesResponse.getData()) {
+	        	statesById.put(state.getId(), state);
+	        }
+	        
+	        // level separator
+	        
+	        System.out.printf("getOtherInfo() took %dms.%n", System.currentTimeMillis() - start);
+    		return true;
+    	} catch (ApiException e) {
+    		e.printStackTrace();
+            loadStatus = LoadStatus.ERROR;
+            loadException = e;
+    		return false;
+    	}
     }
 	
 	

@@ -23,7 +23,7 @@ public class CodegenTest {
     	try {
 			p.load(new FileInputStream("token.properties"));
 			EventPortalWrapper.INSTANCE.setToken(p.getProperty("token"));
-	    	EventPortalWrapper.INSTANCE.loadRefresh();
+	    	EventPortalWrapper.INSTANCE.loadAll();
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);
