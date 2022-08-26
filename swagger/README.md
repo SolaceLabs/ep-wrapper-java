@@ -1,5 +1,5 @@
-https://github.com/swagger-api/swagger-codegen/tree/3.0.0
-https://github.com/swagger-api/swagger-codegen/tree/3.0.0#prerequisites
+- https://github.com/swagger-api/swagger-codegen/tree/3.0.0
+- https://github.com/swagger-api/swagger-codegen/tree/3.0.0#prerequisites
 
 # Prerequisites
 If you're looking for the latest stable version (as of Aug 26th, 2022), you can grab it directly from Maven.org (Java 8 runtime at a minimum):
@@ -9,6 +9,8 @@ wget https://repo1.maven.org/maven2/io/swagger/codegen/v3/swagger-codegen-cli/3.
 
 java -jar swagger-codegen-cli.jar --help
 ```
+
+Then, download the most recent Event Portal API schema JSON file.  Then:
 
 ```
 java -jar swagger-codegen-cli.jar generate \
