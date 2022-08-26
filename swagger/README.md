@@ -10,7 +10,7 @@ wget https://repo1.maven.org/maven2/io/swagger/codegen/v3/swagger-codegen-cli/3.
 java -jar swagger-codegen-cli.jar --help
 ```
 
-Then, download the most recent Event Portal API schema JSON file.  Then:
+Then, download the most recent Event Portal API schema JSON file. From https://openapi-v2.solace.cloud or wherever is the latest (I have an internal dev sneak version).  Then:
 
 ```
 java -jar swagger-codegen-cli.jar generate \
