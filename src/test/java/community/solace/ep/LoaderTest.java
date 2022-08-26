@@ -1,4 +1,4 @@
-package com.solace.labs.epapi;
+package community.solace.ep;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -13,18 +13,18 @@ import javax.swing.tree.MutableTreeNode;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.solace.labs.epapi.client.ApiException;
-import com.solace.labs.epapi.client.model.Address;
-import com.solace.labs.epapi.client.model.AddressLevel;
-import com.solace.labs.epapi.client.model.Application;
-import com.solace.labs.epapi.client.model.ApplicationDomain;
-import com.solace.labs.epapi.client.model.ApplicationVersion;
-import com.solace.labs.epapi.client.model.DeliveryDescriptor;
-import com.solace.labs.epapi.client.model.Event;
-import com.solace.labs.epapi.client.model.EventVersion;
-import com.solace.labs.epapi.client.model.SchemaObject;
-import com.solace.labs.epapi.client.model.SchemaVersion;
-import com.solace.labs.epapi.wrapper.EventPortalWrapper;
+import community.solace.ep.client.ApiException;
+import community.solace.ep.client.model.Address;
+import community.solace.ep.client.model.AddressLevel;
+import community.solace.ep.client.model.Application;
+import community.solace.ep.client.model.ApplicationDomain;
+import community.solace.ep.client.model.ApplicationVersion;
+import community.solace.ep.client.model.DeliveryDescriptor;
+import community.solace.ep.client.model.Event;
+import community.solace.ep.client.model.EventVersion;
+import community.solace.ep.client.model.SchemaObject;
+import community.solace.ep.client.model.SchemaVersion;
+import community.solace.ep.wrapper.EventPortalWrapper;
 
 public class LoaderTest {
 

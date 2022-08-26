@@ -1,4 +1,4 @@
-package com.solace.labs.epapi;
+package community.solace.ep;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -7,11 +7,11 @@ import java.util.Properties;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.solace.labs.epapi.client.model.ApplicationDomain;
-import com.solace.labs.epapi.client.model.ApplicationVersion;
-import com.solace.labs.epapi.client.model.Consumer;
-import com.solace.labs.epapi.client.model.Event;
-import com.solace.labs.epapi.wrapper.EventPortalWrapper;
+import community.solace.ep.client.model.ApplicationDomain;
+import community.solace.ep.client.model.ApplicationVersion;
+import community.solace.ep.client.model.Consumer;
+import community.solace.ep.client.model.Event;
+import community.solace.ep.wrapper.EventPortalWrapper;
 
 public class SearchTest {
 	

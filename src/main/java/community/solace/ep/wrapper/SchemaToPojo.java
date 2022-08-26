@@ -1,4 +1,4 @@
-package com.solace.labs.epapi.wrapper;
+package community.solace.ep.wrapper;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,11 +11,11 @@ import org.jsonschema2pojo.SchemaMapper;
 import org.jsonschema2pojo.SchemaStore;
 import org.jsonschema2pojo.rules.RuleFactory;
 
-import com.fasterxml.jackson.databind.jsontype.impl.ClassNameIdResolver;
-import com.solace.labs.epapi.client.model.EventVersion;
-import com.solace.labs.epapi.client.model.SchemaObject;
-import com.solace.labs.epapi.client.model.SchemaVersion;
 import com.sun.codemodel.JCodeModel;
+
+import community.solace.ep.client.model.EventVersion;
+import community.solace.ep.client.model.SchemaObject;
+import community.solace.ep.client.model.SchemaVersion;
 
 public class SchemaToPojo {
 

@@ -1,6 +1,14 @@
-package com.solace.labs.epapi.wrapper;
+package community.solace.ep.wrapper;
 
-import com.solace.labs.epapi.client.model.*;
+import community.solace.ep.client.model.Application;
+import community.solace.ep.client.model.ApplicationDomain;
+import community.solace.ep.client.model.ApplicationVersion;
+import community.solace.ep.client.model.Event;
+import community.solace.ep.client.model.EventApi;
+import community.solace.ep.client.model.EventApiVersion;
+import community.solace.ep.client.model.EventVersion;
+import community.solace.ep.client.model.SchemaObject;
+import community.solace.ep.client.model.SchemaVersion;
 
 public enum EventPortalObjectType {
 

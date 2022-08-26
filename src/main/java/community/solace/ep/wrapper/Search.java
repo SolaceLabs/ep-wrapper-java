@@ -1,4 +1,4 @@
-package com.solace.labs.epapi.wrapper;
+package community.solace.ep.wrapper;
 
 public class Search {
 
