@@ -42,11 +42,11 @@ dependencies {
 
 jar {
     archiveBaseName = rootProject.name
-    archiveVersion = '0.0.5'
+    archiveVersion = '0.1.0'
     manifest {
         attributes 'Created-By': 'Aaron Lee',
                    'Implementation-Title': 'Solace Event Portal Swagger Wrapper',
-                   'Implementation-Version': '0.0.5'
+                   'Implementation-Version': '0.1.0'
     }
 }
 
