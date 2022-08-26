@@ -447,7 +447,9 @@ keySchemaPrimitiveType: null
     	try {
 			p.load(new FileInputStream("token.properties"));
 			EventPortalWrapper.INSTANCE.setToken(p.getProperty("token"));
-			EventPortalWrapper.INSTANCE.loadAll();
+			if (!EventPortalWrapper.INSTANCE.loadAll()) {
+				System.err.println("COUldn't load!!!   " + EventPortalWrapper.INSTANCE.getLoadException());
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);

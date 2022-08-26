@@ -179,12 +179,12 @@ public enum EventPortalWrapper {
 //	        	loadException = e;
 //	        	return false;
 //	        }
-        if (loadApplicationsInfo()) return false;
-        if (loadEventsInfo()) return false;
-        if (loadSchemaInfo()) return false;
-        if (loadEventApisInfo()) return false;
-        if (loadConsumersInfo()) return false;
-        if (loadOtherInfo()) return false;
+        if (!loadApplicationsInfo()) return false;
+        if (!loadEventsInfo()) return false;
+        if (!loadSchemaInfo()) return false;
+        if (!loadEventApisInfo()) return false;
+        if (!loadConsumersInfo()) return false;
+        if (!loadOtherInfo()) return false;
         System.out.println("EventPortalClient LOADED: " + (System.currentTimeMillis()-start) + "ms with PAGE_SIZE == " + PAGE_SIZE);
         loadStatus = LoadStatus.LOADED;
         lastRefresh = System.currentTimeMillis();
