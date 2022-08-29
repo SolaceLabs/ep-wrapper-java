@@ -1,15 +1,16 @@
 package community.solace.ep.wrapper;
 
-import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.apache.commons.lang.NotImplementedException;
 
 import community.solace.ep.client.ApiClient;
 import community.solace.ep.client.ApiException;
@@ -129,42 +130,54 @@ public enum EventPortalWrapper {
     	this.token = token;
     }
     
-    private static class PortalThreadFactory implements ThreadFactory {
+//    private static class PortalThreadFactory implements ThreadFactory {
+//
+//    	private static AtomicInteger count = new AtomicInteger(1);
+//    	
+//		@Override
+//		public Thread newThread(Runnable r) {
+//			Thread t = new Thread(r, "portal_"+count.getAndIncrement());
+//			t.setDaemon(true);
+//			t.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+//				@Override
+//				public void uncaughtException(Thread t, Throwable e) {
+//					e.printStackTrace();
+//				}
+//			});
+//			return t;
+//		}
+//    }
 
-    	private static AtomicInteger count = new AtomicInteger(1);
-    	
-		@Override
-		public Thread newThread(Runnable r) {
-			Thread t = new Thread(r, "portal_"+count.getAndIncrement());
-			t.setDaemon(true);
-			t.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-				@Override
-				public void uncaughtException(Thread t, Throwable e) {
-					e.printStackTrace();
-				}
-			});
-			return t;
-		}
-    	
-    }
-
-	boolean loadRefresh(ExecutorService pool) {
+	public boolean loadAll(ExecutorService pool) {
+//		if ("a".equals("a")) throw new NotImplementedException("haven't built this method yet");
 		if (loadStatus == LoadStatus.LOADING) {
 			return false;
 		}
 		loadStatus = LoadStatus.LOADING;
-//	    long start = System.currentTimeMillis();
-        
-		Runnable domains = () -> {
-			loadDomainsInfo();
-		};
-		pool.submit(domains);
-		
-		
-		return false;
+	    long start = System.currentTimeMillis();
+        loadException = null;
+		AtomicInteger num = new AtomicInteger(1);  // one job, domains, for sure
+		pool.submit(() -> { loadDomainsInfo(); num.decrementAndGet(); });  // don't count first one
+		pool.submit(() -> { num.incrementAndGet();	loadApplicationsInfo();	num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadEventsInfo();	num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadSchemaInfo();	num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadEventApisInfo();	num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadConsumersInfo();	num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet(); loadOtherInfo(); num.decrementAndGet(); });
+		while (num.get() > 0) {
+			try {
+				Thread.sleep(20);
+			} catch (InterruptedException e) { }
+		}
+		if (loadException != null) {
+			return false;
+		} else {
+	        System.out.println("EventPortalWrapper LOADED: " + (System.currentTimeMillis()-start) + "ms with PAGE_SIZE == " + PAGE_SIZE);
+	        loadStatus = LoadStatus.LOADED;
+	        lastRefresh = System.currentTimeMillis();
+	        return true;
+		}
 	}
-    
-
 
 	public boolean loadAll() {
 		if (loadStatus == LoadStatus.LOADING) {
@@ -172,6 +185,7 @@ public enum EventPortalWrapper {
 		}
 		loadStatus = LoadStatus.LOADING;
 	    long start = System.currentTimeMillis();
+        loadException = null;
         if (!loadDomainsInfo()) return false;
 //	        if (domains.size() == 0) {
 //	        	loadStatus = LoadStatus.ERROR;

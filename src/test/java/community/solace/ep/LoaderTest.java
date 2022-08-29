@@ -6,6 +6,8 @@ import java.io.PrintStream;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.MutableTreeNode;
@@ -447,7 +449,9 @@ keySchemaPrimitiveType: null
     	try {
 			p.load(new FileInputStream("token.properties"));
 			EventPortalWrapper.INSTANCE.setToken(p.getProperty("token"));
-			if (!EventPortalWrapper.INSTANCE.loadAll()) {
+			ExecutorService pool = Executors.newFixedThreadPool(8);
+			
+			if (!EventPortalWrapper.INSTANCE.loadAll(pool)) {
 				System.err.println("COUldn't load!!!   " + EventPortalWrapper.INSTANCE.getLoadException());
 			}
 		} catch (IOException e) {
