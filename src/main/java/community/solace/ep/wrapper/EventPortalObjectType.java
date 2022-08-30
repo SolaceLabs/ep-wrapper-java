@@ -10,6 +10,10 @@ import community.solace.ep.client.model.EventVersion;
 import community.solace.ep.client.model.SchemaObject;
 import community.solace.ep.client.model.SchemaVersion;
 
+/**
+ * Helper Enum to determine what type of Event Portal object you're dealing with.
+ * Useful for switch statements for rendering views.
+ */
 public enum EventPortalObjectType {
 
 	DOMAIN(ApplicationDomain.class),
@@ -43,6 +47,11 @@ public enum EventPortalObjectType {
 		return clazz;
 	}
 	
+	/**
+	 * Pass in a Swagger Event Portal object, and return a particular enum.
+	 * @param object ideally an Event Portal object
+	 * @return an enum describing the type of Event Portal object, or "N_A" if null or invalid
+	 */
 	public EventPortalObjectType getType(Object object) {
 		if (object == null) return N_A;
 		Class<? extends Object> clazz = object.getClass();

@@ -6,11 +6,8 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.commons.lang.NotImplementedException;
 
 import community.solace.ep.client.ApiClient;
 import community.solace.ep.client.ApiException;
@@ -103,16 +100,16 @@ public enum EventPortalWrapper {
     	return loadStatus;
     }
     
+    public Exception getLoadException() {
+    	return loadException;
+    }
+    
     public boolean isLoaded() {
     	return loadStatus == LoadStatus.LOADED;
     }
     
     public boolean isLoading() {
     	return loadStatus == LoadStatus.LOADING;
-    }
-    
-    public Exception getLoadException() {
-    	return loadException;
     }
     
 //    public boolean testConnectivity() {
@@ -129,41 +126,28 @@ public enum EventPortalWrapper {
     public void setToken(String token) {
     	this.token = token;
     }
-    
-//    private static class PortalThreadFactory implements ThreadFactory {
-//
-//    	private static AtomicInteger count = new AtomicInteger(1);
-//    	
-//		@Override
-//		public Thread newThread(Runnable r) {
-//			Thread t = new Thread(r, "portal_"+count.getAndIncrement());
-//			t.setDaemon(true);
-//			t.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-//				@Override
-//				public void uncaughtException(Thread t, Throwable e) {
-//					e.printStackTrace();
-//				}
-//			});
-//			return t;
-//		}
-//    }
 
+    /**
+	 * Loads all objects in parallel using ExecutorService.  If loading is unsuccessful, query `getLoadException()`
+	 * to find out issue.
+     * @param pool an ExecutorService to use for loading objects
+	 * @return true if loading successful; false otherwise
+     */
 	public boolean loadAll(ExecutorService pool) {
-//		if ("a".equals("a")) throw new NotImplementedException("haven't built this method yet");
 		if (loadStatus == LoadStatus.LOADING) {
 			return false;
 		}
 		loadStatus = LoadStatus.LOADING;
 	    long start = System.currentTimeMillis();
-        loadException = null;
+        loadException = null;  // blank it, used at end to make sure no loading errors
 		AtomicInteger num = new AtomicInteger(1);  // one job, domains, for sure
-		pool.submit(() -> { loadDomainsInfo(); num.decrementAndGet(); });  // don't count first one
+		pool.submit(() -> { loadDomainsInfo();		num.decrementAndGet(); });  // don't count first one
 		pool.submit(() -> { num.incrementAndGet();	loadApplicationsInfo();	num.decrementAndGet(); });
-		pool.submit(() -> { num.incrementAndGet();	loadEventsInfo();	num.decrementAndGet(); });
-		pool.submit(() -> { num.incrementAndGet();	loadSchemaInfo();	num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadEventsInfo();		num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadSchemaInfo();		num.decrementAndGet(); });
 		pool.submit(() -> { num.incrementAndGet();	loadEventApisInfo();	num.decrementAndGet(); });
 		pool.submit(() -> { num.incrementAndGet();	loadConsumersInfo();	num.decrementAndGet(); });
-		pool.submit(() -> { num.incrementAndGet(); loadOtherInfo(); num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadOtherInfo();		num.decrementAndGet(); });
 		while (num.get() > 0) {
 			try {
 				Thread.sleep(20);
@@ -179,6 +163,11 @@ public enum EventPortalWrapper {
 		}
 	}
 
+	/**
+	 * Loads all objects serially in this thread.  If loading is unsuccessful, query `getLoadException()`
+	 * to find out issue.
+	 * @return true if loading successful; false otherwise
+	 */
 	public boolean loadAll() {
 		if (loadStatus == LoadStatus.LOADING) {
 			return false;
@@ -220,8 +209,6 @@ public enum EventPortalWrapper {
         System.out.println(eventVersionsById.get("kb0183jdx7j"));
         System.out.println(eventApisByDomainId.get("x4oo4skfh5e"));  // Aaron test 1
         System.out.println(eventApiVersionsByEventApiId.get("ofn2yb68mf1"));  // Aaron test 1
-
-
     }
     
     private ApiClient getApiClient() {
@@ -231,7 +218,10 @@ public enum EventPortalWrapper {
         return apiClient;
     }
     
-    
+    /**
+     * Load just the ApplicationDomain info from Event Portal.
+	 * @return true if loading successful; false otherwise
+     */
     public boolean loadDomainsInfo() {
         ApiClient apiClient = getApiClient();
     	try {
@@ -678,7 +668,13 @@ public enum EventPortalWrapper {
 		return Collections.unmodifiableCollection(statesById.values());
 	}
 	
-	
+	/**
+	 * Possible helper function? Pass in the ID for any Event Portal object, and this
+	 * will return an enum EventPortalObjectType of the object type. <b>NOTE:</b> Event
+	 * Portal objects must first be loaded (loadAll()) for this to work.
+	 * @param id the EventPortal ID of any type of object
+	 * @return
+	 */
 	public EventPortalObjectType getEventPortalObjectType(String id) {
 		if (loadStatus != LoadStatus.LOADED) return null;
 		if (domains.containsKey(id)) return EventPortalObjectType.DOMAIN;
@@ -714,15 +710,26 @@ public enum EventPortalWrapper {
 		return eventVersionsById.values().stream().skip(i).findAny().orElse(null);
 	}
 
+	/**
+	 * Semi-useful method to find all Applications (not versions) using any version of
+	 * an Event.
+	 * @param eventId the ID of the event (not EventVersion)
+	 * @return a Set of all Application names and Domains that either publish or subscribe to this Event
+	 */
 	public Set<String> getAppsUsingEvent(String eventId) {
 		
 		Set<EventVersion> eventVersions = getEventVersionsForEventId(eventId);
+		if (eventVersions == null) return Collections.emptySet();
 		Set<Application> apps = new HashSet<>();
 		Set<String> appDescs = new HashSet<>();
-		if (eventVersions == null) return Collections.emptySet();
-		
 		for (EventVersion eventVersion : eventVersions) {
 			for (String appVerId : eventVersion.getDeclaredConsumingApplicationVersionIds()) {
+				Application app = getApplication(getApplicationVersion(appVerId).getApplicationId());
+				apps.add(app);
+				ApplicationDomain domain = getDomain(app.getApplicationDomainId());
+				appDescs.add(String.format("'%s' in '%s'", app.getName(), domain.getName()));
+			}
+			for (String appVerId : eventVersion.getDeclaredProducingApplicationVersionIds()) {
 				Application app = getApplication(getApplicationVersion(appVerId).getApplicationId());
 				apps.add(app);
 				ApplicationDomain domain = getDomain(app.getApplicationDomainId());
