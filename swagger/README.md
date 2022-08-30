@@ -9,7 +9,9 @@ If you're looking for the latest stable version (as of Aug 26th, 2022), you can 
 ```
 wget https://repo1.maven.org/maven2/io/swagger/codegen/v3/swagger-codegen-cli/3.0.35/swagger-codegen-cli-3.0.35.jar -O swagger-codegen-cli.jar
 
-java -jar swagger-codegen-cli.jar --help
+java -jar swagger-codegen-cli.jar -h
+java -jar swagger-codegen-cli.jar generate -h
+java -jar swagger-codegen-cli.jar config-help -l
 ```
 
 Then, download the most recent Event Portal API schema JSON file. From https://openapi-v2.solace.cloud or wherever is the latest (I have an internal dev sneak version).  Then:
@@ -17,14 +19,9 @@ Then, download the most recent Event Portal API schema JSON file. From https://o
 ```
 java -jar swagger-codegen-cli.jar generate \
  -l java \
+ -c ./config.json \
  -i ./api-docs-v2.json \
- -o out \
- --invoker-package community.solace.ep.client \
- --model-package community.solace.ep.client.model \
- --api-package community.solace.ep.client.api \
- --group-id community.solace \
- --artifact-id ep-swagger-java \
- --artifact-version 0.1.0
+ -o out
 ```
 
 
@@ -53,7 +50,7 @@ ep-swagger-java-0.1.0.jar
 This file can either be used locally in a `lib` folder, or copied over into Maven.
 
 
-# OpenAPITools Codegen
+# TBD: OpenAPITools Codegen
 
 This would be the preferred auto-codegen tool, as it is more active and more community supported.  It forked from the Swagger codegen a while ago.
 
@@ -76,7 +73,7 @@ java -jar openapi-generator-cli.jar generate \
  --api-package community.solace.ep.client.api \
  --group-id community.solace \
  --artifact-id ep-openapi-java \
- --artifact-version 0.0.1
+ --artifact-version 0.0.0
 
 ```
 

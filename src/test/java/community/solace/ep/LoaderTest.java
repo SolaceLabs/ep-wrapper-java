@@ -453,6 +453,7 @@ keySchemaPrimitiveType: null
 			
 			if (!EventPortalWrapper.INSTANCE.loadAll(pool)) {
 				System.err.println("COUldn't load!!!   " + EventPortalWrapper.INSTANCE.getLoadException());
+				throw new RuntimeException(EventPortalWrapper.INSTANCE.getLoadException());
 			}
 		} catch (IOException e) {
 			e.printStackTrace();

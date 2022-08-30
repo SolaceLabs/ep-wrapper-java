@@ -15,10 +15,15 @@ import community.solace.ep.client.Configuration;
 import community.solace.ep.client.api.ApplicationDomainsApi;
 import community.solace.ep.client.api.ApplicationsApi;
 import community.solace.ep.client.api.ConsumersApi;
+import community.solace.ep.client.api.EnumsApi;
+import community.solace.ep.client.api.EnvironmentsApi;
 import community.solace.ep.client.api.EventApIsApi;
+import community.solace.ep.client.api.EventApiProductsApi;
+import community.solace.ep.client.api.EventMeshesApi;
 import community.solace.ep.client.api.EventsApi;
 import community.solace.ep.client.api.SchemasApi;
 import community.solace.ep.client.api.StatesApi;
+import community.solace.ep.client.api.TopicDomainsApi;
 import community.solace.ep.client.model.Application;
 import community.solace.ep.client.model.ApplicationDomain;
 import community.solace.ep.client.model.ApplicationDomainsResponse;
@@ -27,11 +32,19 @@ import community.solace.ep.client.model.ApplicationVersionsResponse;
 import community.solace.ep.client.model.ApplicationsResponse;
 import community.solace.ep.client.model.Consumer;
 import community.solace.ep.client.model.ConsumersResponse;
+import community.solace.ep.client.model.Environment;
+import community.solace.ep.client.model.EnvironmentsResponse;
 import community.solace.ep.client.model.Event;
 import community.solace.ep.client.model.EventApi;
+import community.solace.ep.client.model.EventApiProduct;
+import community.solace.ep.client.model.EventApiProductVersion;
+import community.solace.ep.client.model.EventApiProductVersionsResponse;
+import community.solace.ep.client.model.EventApiProductsResponse;
 import community.solace.ep.client.model.EventApiVersion;
 import community.solace.ep.client.model.EventApiVersionsResponse;
 import community.solace.ep.client.model.EventApisResponse;
+import community.solace.ep.client.model.EventMesh;
+import community.solace.ep.client.model.EventMeshesResponse;
 import community.solace.ep.client.model.EventVersion;
 import community.solace.ep.client.model.EventVersionsResponse;
 import community.solace.ep.client.model.EventsResponse;
@@ -41,6 +54,12 @@ import community.solace.ep.client.model.SchemaVersionsResponse;
 import community.solace.ep.client.model.SchemasResponse;
 import community.solace.ep.client.model.StateDTO;
 import community.solace.ep.client.model.StatesResponse;
+import community.solace.ep.client.model.TopicAddressEnum;
+import community.solace.ep.client.model.TopicAddressEnumVersion;
+import community.solace.ep.client.model.TopicAddressEnumVersionsResponse;
+import community.solace.ep.client.model.TopicAddressEnumsResponse;
+import community.solace.ep.client.model.TopicDomain;
+import community.solace.ep.client.model.TopicDomainsResponse;
 
 public enum EventPortalWrapper {
 
@@ -65,13 +84,36 @@ public enum EventPortalWrapper {
     private Map<String, SchemaVersion> schemaVersionsById = new LinkedHashMap<>();
     private Map<String, Set<SchemaVersion>> schemaVersionsBySchemaId = new LinkedHashMap<>();
 
+    private Map<String, TopicAddressEnum> enumsById = new LinkedHashMap<>();
+    private Map<String, Set<TopicAddressEnum>> enumsByDomainId = new LinkedHashMap<>();
+    private Map<String, TopicAddressEnumVersion> enumVersionsById = new LinkedHashMap<>();
+    private Map<String, Set<TopicAddressEnumVersion>> enumVersionsByEnumId = new LinkedHashMap<>();
+
     private Map<String, EventApi> eventApisById = new LinkedHashMap<>();
     private Map<String, Set<EventApi>> eventApisByDomainId = new LinkedHashMap<>();
     private Map<String, EventApiVersion> eventApiVersionsById = new LinkedHashMap<>();
     private Map<String, Set<EventApiVersion>> eventApiVersionsByEventApiId = new LinkedHashMap<>();
 
+    private Map<String, EventApiProduct> eventApiProductsById = new LinkedHashMap<>();
+    private Map<String, Set<EventApiProduct>> eventApiProductsByDomainId = new LinkedHashMap<>();
+    private Map<String, EventApiProductVersion> eventApiProductVersionsById = new LinkedHashMap<>();
+    private Map<String, Set<EventApiProductVersion>> eventApiProductVersionsByEventApiProductId = new LinkedHashMap<>();
+
     private Map<String, Consumer> consumersById = new LinkedHashMap<>();
     private Map<String, Set<Consumer>> consumersByApplicationVersionId = new LinkedHashMap<>();
+
+    private Map<String, EventMesh> eventMeshesById = new LinkedHashMap<>();
+    private Map<String, Set<EventMesh>> eventMeshesByEnvironmentId = new LinkedHashMap<>();
+//    private Map<String, Set<EventMesh>> eventMeshesByBrokerType = new LinkedHashMap<>();
+//    private Map<String, EventMeshVersion> eventMeshVersionsById = new LinkedHashMap<>();
+//    private Map<String, Set<EventMeshVersion>> eventMeshVersionsByEventMeshId = new LinkedHashMap<>();
+
+    
+    private Map<String, Set<TopicDomain>> topicDomainsByDomainId = new LinkedHashMap<>();
+    private Map<String, Set<TopicDomain>> topicDomainsByBrokerType = new LinkedHashMap<>();
+
+    
+    private Map<String, Environment> environmentsById = new LinkedHashMap<>();
 
     private Map<String, StateDTO> statesById = new LinkedHashMap<>();
     
@@ -89,6 +131,7 @@ public enum EventPortalWrapper {
     }
     
     private LoadStatus loadStatus = LoadStatus.UNINITIALIZED;
+    private String loadErrorString = null;
     private Exception loadException = null;
 	private long lastRefresh = 0L;
 		
@@ -98,6 +141,10 @@ public enum EventPortalWrapper {
     
     public LoadStatus getLoadStatus() {
     	return loadStatus;
+    }
+    
+    public String getLoadErrorString() {
+    	return loadErrorString;
     }
     
     public Exception getLoadException() {
@@ -140,14 +187,20 @@ public enum EventPortalWrapper {
 		loadStatus = LoadStatus.LOADING;
 	    long start = System.currentTimeMillis();
         loadException = null;  // blank it, used at end to make sure no loading errors
+        loadErrorString = null;
 		AtomicInteger num = new AtomicInteger(1);  // one job, domains, for sure
-		pool.submit(() -> { loadDomainsInfo();		num.decrementAndGet(); });  // don't count first one
-		pool.submit(() -> { num.incrementAndGet();	loadApplicationsInfo();	num.decrementAndGet(); });
-		pool.submit(() -> { num.incrementAndGet();	loadEventsInfo();		num.decrementAndGet(); });
-		pool.submit(() -> { num.incrementAndGet();	loadSchemaInfo();		num.decrementAndGet(); });
-		pool.submit(() -> { num.incrementAndGet();	loadEventApisInfo();	num.decrementAndGet(); });
-		pool.submit(() -> { num.incrementAndGet();	loadConsumersInfo();	num.decrementAndGet(); });
-		pool.submit(() -> { num.incrementAndGet();	loadOtherInfo();		num.decrementAndGet(); });
+		pool.submit(() -> { loadDomains();		num.decrementAndGet(); });  // don't count first one
+		pool.submit(() -> { num.incrementAndGet();	loadApplications();	num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadEvents();		num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadSchemas();		num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadEnums();		num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadEventApis();	num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadEventApiProducts();	num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadStates();		num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadConsumers();	num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadEventMeshes();	num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadTopicDomains();	num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadEnvironments();	num.decrementAndGet(); });
 		while (num.get() > 0) {
 			try {
 				Thread.sleep(20);
@@ -175,26 +228,32 @@ public enum EventPortalWrapper {
 		loadStatus = LoadStatus.LOADING;
 	    long start = System.currentTimeMillis();
         loadException = null;
-        if (!loadDomainsInfo()) return false;
+        loadErrorString = null;
+        if (!loadDomains()) return false;
 //	        if (domains.size() == 0) {
 //	        	loadStatus = LoadStatus.ERROR;
 //	        	IllegalStateException e = new IllegalStateException("Something wrong with loading, no domains loaded!");
 //	        	loadException = e;
 //	        	return false;
 //	        }
-        if (!loadApplicationsInfo()) return false;
-        if (!loadEventsInfo()) return false;
-        if (!loadSchemaInfo()) return false;
-        if (!loadEventApisInfo()) return false;
-        if (!loadConsumersInfo()) return false;
-        if (!loadOtherInfo()) return false;
+        if (!loadApplications()) return false;
+        if (!loadEvents()) return false;
+        if (!loadSchemas()) return false;
+        if (!loadEnums()) return false;
+        if (!loadEventApis()) return false;
+        if (!loadEventApiProducts()) return false;
+        if (!loadStates()) return false;
+        if (!loadConsumers()) return false;
+        if (!loadEventMeshes()) return false;
+        if (!loadTopicDomains()) return false;
+        if (!loadEnvironments()) return false;
         System.out.println("EventPortalWrapper LOADED: " + (System.currentTimeMillis()-start) + "ms with PAGE_SIZE == " + PAGE_SIZE);
         loadStatus = LoadStatus.LOADED;
         lastRefresh = System.currentTimeMillis();
         return true;
 	}
 	
-    private void afterLoadingTests() {
+    void afterLoadingTests() {
         System.out.println("##################################");
         System.out.println("domains.size() = " + domains.size());
         System.out.println("appsById.size() = " + applicationsById.size());
@@ -222,7 +281,7 @@ public enum EventPortalWrapper {
      * Load just the ApplicationDomain info from Event Portal.
 	 * @return true if loading successful; false otherwise
      */
-    public boolean loadDomainsInfo() {
+    public boolean loadDomains() {
         ApiClient apiClient = getApiClient();
     	try {
     		long start = System.currentTimeMillis();
@@ -235,17 +294,17 @@ public enum EventPortalWrapper {
 	        		domains.put(domain.getId(), domain);
 	        	}
 	        } while (((Map<?, ?>)response.getMeta().get("pagination")).get("nextPage") != null);
-	        System.out.printf("getDomainsInfo() took %dms.%n", System.currentTimeMillis() - start);
+	        System.out.printf("loadDomains() took %dms.%n", System.currentTimeMillis() - start);
 	        return true;
     	} catch (ApiException e) {
-    		e.printStackTrace();
             loadStatus = LoadStatus.ERROR;
+            loadErrorString = e.getResponseBody();
             loadException = e;
     		return false;
     	}
     }
     
-    public boolean loadApplicationsInfo() {
+    public boolean loadApplications() {
         ApiClient apiClient = getApiClient();
     	try {
 	    	long start = System.currentTimeMillis();
@@ -280,17 +339,17 @@ public enum EventPortalWrapper {
 	            	applicationVersionsByApplicatoinId.get(appVer.getApplicationId()).add(appVer);
 	            }
 	        } while (((Map<?, ?>)response3.getMeta().get("pagination")).get("nextPage") != null);
-	        System.out.printf("getApplicationsInfo() took %dms.%n", System.currentTimeMillis() - start);
+	        System.out.printf("loadApplications() took %dms.%n", System.currentTimeMillis() - start);
     		return true;
     	} catch (ApiException e) {
-    		e.printStackTrace();
             loadStatus = LoadStatus.ERROR;
+            loadErrorString = e.getResponseBody();
             loadException = e;
     		return false;
     	}
     }
     
-    public boolean loadEventsInfo() {
+    public boolean loadEvents() {
         ApiClient apiClient = getApiClient();
     	try {
 	    	eventsById = new LinkedHashMap<>();
@@ -325,17 +384,17 @@ public enum EventPortalWrapper {
 	        		eventVersionsByEventId.get(eventVersion.getEventId()).add(eventVersion);
 	        	}
 	        } while (((Map<?, ?>)eventVersionsResponse.getMeta().get("pagination")).get("nextPage") != null);
-	        System.out.printf("getEventsInfo() took %dms.%n", System.currentTimeMillis() - start);
+	        System.out.printf("loadEvents() took %dms.%n", System.currentTimeMillis() - start);
     		return true;
     	} catch (ApiException e) {
-    		e.printStackTrace();
             loadStatus = LoadStatus.ERROR;
+            loadErrorString = e.getResponseBody();
             loadException = e;
     		return false;
     	}
     }
     
-    public boolean loadSchemaInfo() {
+    public boolean loadSchemas() {
         ApiClient apiClient = getApiClient();
     	try {
 	    	long start = System.currentTimeMillis();
@@ -382,17 +441,62 @@ public enum EventPortalWrapper {
 	//    		}
 	//    		schemaVersionsBySchemaId.get(schemaVersion.getSchemaId()).add(schemaVersion);
 	//        }
-	        System.out.printf("getSchemaInfo() took %dms.%n", System.currentTimeMillis() - start);
+	        System.out.printf("loadSchema() took %dms.%n", System.currentTimeMillis() - start);
     		return true;
     	} catch (ApiException e) {
-    		e.printStackTrace();
             loadStatus = LoadStatus.ERROR;
+            loadErrorString = e.getResponseBody();
             loadException = e;
     		return false;
     	}
     }
     
-    public boolean loadEventApisInfo() {
+    public boolean loadEnums() {
+        ApiClient apiClient = getApiClient();
+    	try {
+	    	enumsById = new LinkedHashMap<>();
+	    	enumsByDomainId = new LinkedHashMap<>();
+	    	long start = System.currentTimeMillis();
+	        EnumsApi enumsApi = new EnumsApi(apiClient);
+	        TopicAddressEnumsResponse enumsReponse;
+	        int page = 1;
+	        do {
+	        	enumsReponse = enumsApi.getEnums(PAGE_SIZE, page++, null, null, null, null, null, null);
+		        for (TopicAddressEnum topicAddressEnum : enumsReponse.getData()) {
+		        	enumsById.put(topicAddressEnum.getId(), topicAddressEnum);
+		        	if (enumsByDomainId.get(topicAddressEnum.getApplicationDomainId()) == null) {
+		        		enumsByDomainId.put(topicAddressEnum.getApplicationDomainId(), new HashSet<>());
+		        	}
+		        	enumsByDomainId.get(topicAddressEnum.getApplicationDomainId()).add(topicAddressEnum);
+		        }
+	        } while (((Map<?, ?>)enumsReponse.getMeta().get("pagination")).get("nextPage") != null);
+	    	
+	        // enum versions
+	        enumVersionsById = new LinkedHashMap<>();
+	        enumVersionsByEnumId = new LinkedHashMap<>();
+	        TopicAddressEnumVersionsResponse enumVersionsResponse;
+	        page = 1;
+	        do {
+	        	enumVersionsResponse = enumsApi.getEnumVersions(PAGE_SIZE, page++, null);
+	        	for (TopicAddressEnumVersion enumVersion : enumVersionsResponse.getData()) {
+	        		enumVersionsById.put(enumVersion.getId(), enumVersion);
+	        		if (enumVersionsByEnumId.get(enumVersion.getEnumId()) == null) {
+	        			enumVersionsByEnumId.put(enumVersion.getEnumId(), new HashSet<>());
+	        		}
+	        		enumVersionsByEnumId.get(enumVersion.getEnumId()).add(enumVersion);
+	        	}
+	        } while (((Map<?, ?>)enumVersionsResponse.getMeta().get("pagination")).get("nextPage") != null);
+	        System.out.printf("loadEnums() took %dms.%n", System.currentTimeMillis() - start);
+    		return true;
+    	} catch (ApiException e) {
+            loadStatus = LoadStatus.ERROR;
+            loadErrorString = e.getResponseBody();
+            loadException = e;
+    		return false;
+    	}
+    }
+    
+    public boolean loadEventApis() {
         ApiClient apiClient = getApiClient();
     	try {
 	    	long start = System.currentTimeMillis();
@@ -427,18 +531,83 @@ public enum EventPortalWrapper {
 	        		eventApiVersionsByEventApiId.get(eventApiVersion.getEventApiId()).add(eventApiVersion);
 	        	}
 	        } while (eventApisReponse.getMeta().getPagination().getNextPage() != null);
-	        System.out.printf("loadEventApisInfo() took %dms.%n", System.currentTimeMillis() - start);
+	        System.out.printf("loadEventApis() took %dms.%n", System.currentTimeMillis() - start);
     		return true;
     	} catch (ApiException e) {
-    		e.printStackTrace();
             loadStatus = LoadStatus.ERROR;
+            loadErrorString = e.getResponseBody();
             loadException = e;
     		return false;
     	}
     }
 
+    public boolean loadEventApiProducts() {
+        ApiClient apiClient = getApiClient();
+    	try {
+	    	long start = System.currentTimeMillis();
+	    	eventApiProductsById = new LinkedHashMap<>();
+	    	eventApiProductsByDomainId = new LinkedHashMap<>();
+	    	EventApiProductsApi eventApiProductsApi = new EventApiProductsApi(apiClient);
+	        EventApiProductsResponse eventApiProductsReponse;
+	        int page = 1;
+	        do {
+	        	eventApiProductsReponse = eventApiProductsApi.getEventApiProducts(PAGE_SIZE, page++, null, null, null, null, null, null, null);
+		        for (EventApiProduct eventApiProduct : eventApiProductsReponse.getData()) {
+		        	eventApiProductsById.put(eventApiProduct.getId(), eventApiProduct);
+		        	if (eventApiProductsByDomainId.get(eventApiProduct.getApplicationDomainId()) == null) {
+		        		eventApiProductsByDomainId.put(eventApiProduct.getApplicationDomainId(), new HashSet<>());
+		        	}
+		        	eventApiProductsByDomainId.get(eventApiProduct.getApplicationDomainId()).add(eventApiProduct);
+		        }
+	        } while (eventApiProductsReponse.getMeta().getPagination().getNextPage() != null);
+	        
+	        // event API versions
+	        eventApiProductVersionsById = new LinkedHashMap<>();
+	        eventApiProductVersionsByEventApiProductId = new LinkedHashMap<>();
+	        EventApiProductVersionsResponse eventApiProductVersionsResponse;
+	        page = 1;
+	        do {
+	        	eventApiProductVersionsResponse = eventApiProductsApi.getEventApiProductVersions(PAGE_SIZE, page++, null, null, null);
+	        	for (EventApiProductVersion eventApiProductVersion : eventApiProductVersionsResponse.getData()) {
+	        		eventApiProductVersionsById.put(eventApiProductVersion.getId(), eventApiProductVersion);
+	        		if (eventApiProductVersionsByEventApiProductId.get(eventApiProductVersion.getEventApiProductId()) == null) {
+	        			eventApiProductVersionsByEventApiProductId.put(eventApiProductVersion.getEventApiProductId(), new HashSet<>());
+	        		}
+	        		eventApiProductVersionsByEventApiProductId.get(eventApiProductVersion.getEventApiProductId()).add(eventApiProductVersion);
+	        	}
+	        } while (eventApiProductsReponse.getMeta().getPagination().getNextPage() != null);
+	        System.out.printf("loadEventApiProducts() took %dms.%n", System.currentTimeMillis() - start);
+    		return true;
+    	} catch (ApiException e) {
+            loadStatus = LoadStatus.ERROR;
+            loadErrorString = e.getResponseBody();
+            loadException = e;
+    		return false;
+    	}
+    }
     
-    public boolean loadConsumersInfo() {
+    public boolean loadStates() {
+        ApiClient apiClient = getApiClient();
+    	try {
+	    	long start = System.currentTimeMillis();
+	    	// states
+	    	statesById = new LinkedHashMap<>();
+	        StatesApi statesApi = new StatesApi(apiClient);
+	        StatesResponse statesResponse = statesApi.getStates();
+	        for (StateDTO state : statesResponse.getData()) {
+	        	statesById.put(state.getId(), state);
+	        }
+	        System.out.printf("loadStates() took %dms.%n", System.currentTimeMillis() - start);
+    		return true;
+    	} catch (ApiException e) {
+            loadStatus = LoadStatus.ERROR;
+            loadErrorString = e.getResponseBody();
+            loadException = e;
+    		return false;
+    	}
+    }
+
+    public boolean loadConsumers() {
         ApiClient apiClient = getApiClient();
     	try {
 	    	long start = System.currentTimeMillis();
@@ -457,42 +626,106 @@ public enum EventPortalWrapper {
 		        	consumersByApplicationVersionId.get(consumer.getApplicationVersionId()).add(consumer);
 		        }
 	        } while (((Map<?, ?>)consumersReponse.getMeta().get("pagination")).get("nextPage") != null);
-	        System.out.printf("loadConsumersInfo() took %dms.%n", System.currentTimeMillis() - start);
+	        System.out.printf("loadConsumers() took %dms.%n", System.currentTimeMillis() - start);
     		return true;
     	} catch (ApiException e) {
-    		e.printStackTrace();
             loadStatus = LoadStatus.ERROR;
+            loadErrorString = e.getResponseBody();
+            loadException = e;
+    		return false;
+    	}
+    }
+    
+    public boolean loadEventMeshes() {
+        ApiClient apiClient = getApiClient();
+    	try {
+	    	eventMeshesById = new LinkedHashMap<>();
+	    	eventMeshesByEnvironmentId = new LinkedHashMap<>();
+	    	long start = System.currentTimeMillis();
+	        EventMeshesApi eventMeshesApi = new EventMeshesApi(apiClient);
+	        EventMeshesResponse eventMeshesReponse;
+	        int page = 1;
+	        do {
+	        	eventMeshesReponse = eventMeshesApi.getEventMeshes(PAGE_SIZE, page++, null, null);
+		        for (EventMesh eventMesh : eventMeshesReponse.getData()) {
+		        	eventMeshesById.put(eventMesh.getId(), eventMesh);
+		        	if (eventMeshesByEnvironmentId.get(eventMesh.getEnvironmentId()) == null) {
+		        		eventMeshesByEnvironmentId.put(eventMesh.getEnvironmentId(), new HashSet<>());
+		        	}
+		        	eventMeshesByEnvironmentId.get(eventMesh.getEnvironmentId()).add(eventMesh);
+//		        	if (eventMeshesByBrokerType.get(eventMesh.get) == null) {
+//		        		eventMeshesByBrokerType.put(eventMesh.getBrokerType(), new HashSet<>());
+//		        	}
+//		        	eventMeshesByBrokerType.get(eventMesh.getBrokerType()).add(eventMesh);
+		        }
+	        } while (((Map<?, ?>)eventMeshesReponse.getMeta().get("pagination")).get("nextPage") != null);
+	        System.out.printf("loadEventMeshes() took %dms.%n", System.currentTimeMillis() - start);
+    		return true;
+    	} catch (ApiException e) {
+            loadStatus = LoadStatus.ERROR;
+            loadErrorString = e.getResponseBody();
             loadException = e;
     		return false;
     	}
     }
 
-    
-    public boolean loadOtherInfo() {
+    public boolean loadTopicDomains() {
         ApiClient apiClient = getApiClient();
     	try {
 	    	long start = System.currentTimeMillis();
-	    	// states
-	    	statesById = new LinkedHashMap<>();
-	        StatesApi statesApi = new StatesApi(apiClient);
-	        StatesResponse statesResponse = statesApi.getStates();
-	        for (StateDTO state : statesResponse.getData()) {
-	        	statesById.put(state.getId(), state);
-	        }
-	        
-	        // level separator
-	        
-	        System.out.printf("getOtherInfo() took %dms.%n", System.currentTimeMillis() - start);
+//	    	topicDomainsById = new LinkedHashMap<>();
+	    	TopicDomainsApi topicDomainsApi = new TopicDomainsApi(apiClient);
+	        TopicDomainsResponse topicDomainsReponse;
+	        int page = 1;
+	        do {
+	        	topicDomainsReponse = topicDomainsApi.getTopicDomains(PAGE_SIZE, page++, null, null, null, null);
+		        for (TopicDomain topicDomain : topicDomainsReponse.getData()) {
+//		        	topicDomainsById.put(topicDomain.getgetId(), topicDomain);
+		           	if (topicDomainsByDomainId.get(topicDomain.getApplicationDomainId()) == null) {
+		           		topicDomainsByDomainId.put(topicDomain.getApplicationDomainId(), new HashSet<>());
+		        	}
+		           	topicDomainsByDomainId.get(topicDomain.getApplicationDomainId()).add(topicDomain);
+		           	if (topicDomainsByBrokerType.get(topicDomain.getBrokerType()) == null) {
+		           		topicDomainsByBrokerType.put(topicDomain.getBrokerType(), new HashSet<>());
+		        	}
+		           	topicDomainsByBrokerType.get(topicDomain.getBrokerType()).add(topicDomain);
+		        }
+	        } while (((Map<?, ?>)topicDomainsReponse.getMeta().get("pagination")).get("nextPage") != null);
+	        System.out.printf("loadTopicDomains() took %dms.%n", System.currentTimeMillis() - start);
     		return true;
     	} catch (ApiException e) {
-    		e.printStackTrace();
             loadStatus = LoadStatus.ERROR;
+            loadErrorString = e.getResponseBody();
             loadException = e;
     		return false;
     	}
     }
-	
-	
+    	
+    public boolean loadEnvironments() {
+        ApiClient apiClient = getApiClient();
+    	try {
+	    	long start = System.currentTimeMillis();
+	    	environmentsById = new LinkedHashMap<>();
+	    	EnvironmentsApi environmentsApi = new EnvironmentsApi(apiClient);
+	        EnvironmentsResponse environmentsReponse;
+	        int page = 1;
+	        do {
+	        	environmentsReponse = environmentsApi.getEnvironments(PAGE_SIZE, page++, null, null);
+		        for (Environment environment : environmentsReponse.getData()) {
+		        	environmentsById.put(environment.getId(), environment);
+		        }
+	        } while (((Map<?, ?>)environmentsReponse.getMeta().get("pagination")).get("nextPage") != null);
+	        System.out.printf("loadEnvironments() took %dms.%n", System.currentTimeMillis() - start);
+    		return true;
+    	} catch (ApiException e) {
+            loadStatus = LoadStatus.ERROR;
+            loadErrorString = e.getResponseBody();
+            loadException = e;
+    		return false;
+    	}
+    }
+
+
     
     
     
@@ -527,7 +760,6 @@ public enum EventPortalWrapper {
     public Collection<Application> getApplications() {
     	return Collections.unmodifiableCollection(applicationsById.values());
     }
-    
     
     // Application Versions...
     public ApplicationVersion getApplicationVersion(String id) {
@@ -564,7 +796,6 @@ public enum EventPortalWrapper {
 		Application app = applicationsById.get(applicationVersionsById.get(appVerId).getApplicationId());
 		return (event.getApplicationDomainId().equals(app.getApplicationDomainId()));
 	}
-
 	
 	// Event Versions...
 	public EventVersion getEventVersion(String id) {
@@ -595,7 +826,6 @@ public enum EventPortalWrapper {
 		return Collections.unmodifiableSet(schemasByDomainId.get(domainId));
 	}
 	
-	
 	// Schema Versions...
 	/**
 	 * @param id
@@ -619,29 +849,118 @@ public enum EventPortalWrapper {
 		return Collections.unmodifiableSet(schemaVersionsBySchemaId.get(schemaId));
 	}
 	
+
+	
+	// enums...
+	public TopicAddressEnum getEnum(String id) {
+		return enumsById.get(id);
+	}
+
+	public Collection<TopicAddressEnum> getEnums() {
+		return Collections.unmodifiableCollection(enumsById.values());
+	}
+
+	public Set<TopicAddressEnum> getEnumsForDomainId(String domainId) {
+		if (enumsByDomainId.get(domainId) == null) return Collections.emptySet();
+		return Collections.unmodifiableSet(enumsByDomainId.get(domainId));
+	}
+	
+	// Enum Versions...
+	/**
+	 * @param id
+	 * @return null if not found, otherwise object
+	 */
+	public TopicAddressEnumVersion getEnumVersion(String id) {
+		return enumVersionsById.get(id);
+	}
+	
+	public Collection<TopicAddressEnumVersion> getEnumVersions() {
+		return Collections.unmodifiableCollection(enumVersionsById.values());
+	}
+	
+	/**
+	 * 
+	 * @param enumId
+	 * @return empty list if not found, otherwise Set
+	 */
+	public Set<TopicAddressEnumVersion> getEnumVersionsForEnumId(String enumId) {
+		if (enumVersionsByEnumId.get(enumId) == null) return Collections.emptySet();
+		return Collections.unmodifiableSet(enumVersionsByEnumId.get(enumId));
+	}
+
 	
 	
+	
+	// event APIs
 	public EventApi getEventApi(String id) {
 		return eventApisById.get(id);
+	}
+	
+	public Collection<EventApi> getEventApis() {
+		return Collections.unmodifiableCollection(eventApisById.values());
 	}
 
 	public Set<EventApi> getEventApisForDomainId(String domainId) {
 		if (eventApisByDomainId.get(domainId) == null) return Collections.emptySet();
 		return Collections.unmodifiableSet(eventApisByDomainId.get(domainId));
 	}
-	
-	
-	
 
 	public EventApiVersion getEventApiVersion(String id) {
 		return eventApiVersionsById.get(id);
 	}
 	
+	public Collection<EventApiVersion> getEventApiVersions() {
+		return Collections.unmodifiableCollection(eventApiVersionsById.values());
+	}
+
 	public Set<EventApiVersion> getEventApiVersionsForEventApiId(String eventApiId) {
 		if (eventApiVersionsByEventApiId.get(eventApiId) == null) return Collections.emptySet();
 		return Collections.unmodifiableSet(eventApiVersionsByEventApiId.get(eventApiId));
 	}
 
+	
+
+	
+	// event APIs
+	public EventApiProduct getEventApiProduct(String id) {
+		return eventApiProductsById.get(id);
+	}
+	
+	public Collection<EventApiProduct> getEventApiProducts() {
+		return Collections.unmodifiableCollection(eventApiProductsById.values());
+	}
+
+	public Set<EventApiProduct> getEventApiProductsForDomainId(String domainId) {
+		if (eventApiProductsByDomainId.get(domainId) == null) return Collections.emptySet();
+		return Collections.unmodifiableSet(eventApiProductsByDomainId.get(domainId));
+	}
+
+	public EventApiProductVersion getEventApiProductVersion(String id) {
+		return eventApiProductVersionsById.get(id);
+	}
+	
+	public Collection<EventApiProductVersion> getEventApiProductVersions() {
+		return Collections.unmodifiableCollection(eventApiProductVersionsById.values());
+	}
+
+	public Set<EventApiProductVersion> getEventApiProductVersionsForEventApiProductId(String eventApiProductId) {
+		if (eventApiProductVersionsByEventApiProductId.get(eventApiProductId) == null) return Collections.emptySet();
+		return Collections.unmodifiableSet(eventApiProductVersionsByEventApiProductId.get(eventApiProductId));
+	}
+
+	
+	
+	
+	public StateDTO getState(String id) {
+		return statesById.get(id);
+	}
+	
+	public Collection<StateDTO> getStates() {
+		return Collections.unmodifiableCollection(statesById.values());
+	}
+	
+
+	
 	
 	
 	
@@ -659,14 +978,47 @@ public enum EventPortalWrapper {
 	}
 
 	
+
 	
-	public StateDTO getState(String id) {
-		return statesById.get(id);
+	public EventMesh getEventMesh(String id) {
+		return eventMeshesById.get(id);
 	}
 	
-	public Collection<StateDTO> getStates() {
-		return Collections.unmodifiableCollection(statesById.values());
+	public Collection<EventMesh> getEventMeshes() {
+		return Collections.unmodifiableCollection(eventMeshesById.values());
 	}
+	
+	public Set<EventMesh> getEventMeshsForEnvironmentId(String environtmentId) {
+		if (!eventMeshesByEnvironmentId.containsKey(environtmentId)) return Collections.emptySet();
+		return Collections.unmodifiableSet(eventMeshesByEnvironmentId.get(environtmentId));
+	}
+
+	
+	
+	
+	
+	
+	
+	public Set<TopicDomain> getTopicDomainsForDomainId(String domainId) {
+		if (topicDomainsByDomainId.get(domainId) == null) return Collections.emptySet();
+		return Collections.unmodifiableSet(topicDomainsByDomainId.get(domainId));
+	}
+
+	
+	
+	
+	
+	public Environment getEnvironment(String id) {
+		return environmentsById.get(id);
+	}
+	
+	public Collection<Environment> getEnvironments() {
+		return Collections.unmodifiableCollection(environmentsById.values());
+	}
+	
+	
+	
+	
 	
 	/**
 	 * Possible helper function? Pass in the ID for any Event Portal object, and this
