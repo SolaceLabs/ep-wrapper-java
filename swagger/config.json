@@ -1,0 +1,11 @@
+{
+  "modelPackage": "community.solace.ep.client.model",
+  "apiPackage": "community.solace.ep.client.api",
+  "invokerPackage": "community.solace.ep.client",
+  "groupId": "community.solace.ep",
+
+  "artifactId": "ep-swagger-java",
+  "artifactVersion": "0.1.0-SNAPSHOT",
+  "artifactUrl": "https://solace.community",
+  "artifactDescription": "A Swagger compiled Java library for the Solace Event Portal 2.0 REST API"
+}
