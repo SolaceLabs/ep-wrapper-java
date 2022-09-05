@@ -22,27 +22,29 @@ repositories {
 
 dependencies {
     implementation fileTree(dir: 'lib', include: '*.jar')  // EP 2.0 API Swagger codegen
-    // for swagger:
-    runtimeOnly group: 'com.squareup.okhttp', name: 'okhttp', version: '2.7.5'
-    runtimeOnly group: 'io.gsonfire', name: 'gson-fire', version: '1.8.5'
-    runtimeOnly group: 'org.threeten', name: 'threetenbp', version: '1.6.0'
+    // for swagger:  (used to be runtimeOnly but now we're using some of these libraries)
+    implementation group: 'com.squareup.okhttp', name: 'okhttp', version: '2.7.5'
+    implementation group: 'io.gsonfire', name: 'gson-fire', version: '1.8.5'
+    implementation group: 'org.threeten', name: 'threetenbp', version: '1.6.0'
 
     implementation group: 'org.jsonschema2pojo', name: 'jsonschema2pojo-core', version:'1.1.2'  // for Java codegen
+    implementation group: 'javax.annotation', name:'javax.annotation-api', version:'1.3.2'      // for loading any generated code
+
 
     // Use JUnit test framework.
     testImplementation 'junit:junit:4.13'
 
     // This dependency is exported to consumers, that is to say found on their compile classpath.
-    api 'org.apache.commons:commons-math3:3.6.1'
+    //api 'org.apache.commons:commons-math3:3.6.1'
 
     // This dependency is used internally, and not exposed to consumers on their own compile classpath.
-    implementation 'com.google.guava:guava:29.0-jre'
+    //implementation 'com.google.guava:guava:29.0-jre'
 }
 
 
 jar {
     archiveBaseName = rootProject.name
-    archiveVersion = '0.1.1'
+    archiveVersion = '0.1.1-SNAPSHOT'
     manifest {
         attributes 'Created-By': 'Aaron Lee',
                    'Implementation-Title': 'Solace Event Portal Swagger Wrapper',

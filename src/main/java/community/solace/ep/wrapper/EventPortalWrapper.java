@@ -1,5 +1,8 @@
 package community.solace.ep.wrapper;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -8,6 +11,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.squareup.okhttp.Call;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.Response;
 
 import community.solace.ep.client.ApiClient;
 import community.solace.ep.client.ApiException;
@@ -62,7 +74,7 @@ import community.solace.ep.client.model.TopicDomain;
 import community.solace.ep.client.model.TopicDomainsResponse;
 
 public enum EventPortalWrapper {
-
+	
 	INSTANCE;  // singleton pattern
 
     private static final int PAGE_SIZE = 50;
@@ -110,12 +122,14 @@ public enum EventPortalWrapper {
 
     
     private Map<String, Set<TopicDomain>> topicDomainsByDomainId = new LinkedHashMap<>();
-    private Map<String, Set<TopicDomain>> topicDomainsByBrokerType = new LinkedHashMap<>();
+//    private Map<String, Set<TopicDomain>> topicDomainsByBrokerType = new LinkedHashMap<>();
 
     
     private Map<String, Environment> environmentsById = new LinkedHashMap<>();
 
     private Map<String, StateDTO> statesById = new LinkedHashMap<>();
+    
+    private Map<String, String> userNamesById = new LinkedHashMap<>();
     
     private String token = null;
 
@@ -159,16 +173,9 @@ public enum EventPortalWrapper {
     	return loadStatus == LoadStatus.LOADING;
     }
     
-//    public boolean testConnectivity() {
-//	  	ApiClient apiClient = Configuration.getDefaultApiClient();
-//        apiClient.setBasePath("http://api.solace.cloud");
-//        apiClient.setAccessToken(token);
-////        apiClient.getHttpClient().getDns().
-//        return true;
-//    }
-
     /** This sets the Event Portal token used for pulling data via REST API.
      * This token is not stored on disk or anything.
+     * @param token a long String of characters generated from the Solace Event Portal
      */
     public void setToken(String token) {
     	this.token = token;
@@ -201,6 +208,7 @@ public enum EventPortalWrapper {
 		pool.submit(() -> { num.incrementAndGet();	loadEventMeshes();	num.decrementAndGet(); });
 		pool.submit(() -> { num.incrementAndGet();	loadTopicDomains();	num.decrementAndGet(); });
 		pool.submit(() -> { num.incrementAndGet();	loadEnvironments();	num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadUsersCustom();	num.decrementAndGet(); });
 		while (num.get() > 0) {
 			try {
 				Thread.sleep(20);
@@ -247,6 +255,7 @@ public enum EventPortalWrapper {
         if (!loadEventMeshes()) return false;
         if (!loadTopicDomains()) return false;
         if (!loadEnvironments()) return false;
+        loadUsersCustom();  // either way, keep going even if this breaks
         System.out.println("EventPortalWrapper LOADED: " + (System.currentTimeMillis()-start) + "ms with PAGE_SIZE == " + PAGE_SIZE);
         loadStatus = LoadStatus.LOADED;
         lastRefresh = System.currentTimeMillis();
@@ -685,10 +694,10 @@ public enum EventPortalWrapper {
 		           		topicDomainsByDomainId.put(topicDomain.getApplicationDomainId(), new HashSet<>());
 		        	}
 		           	topicDomainsByDomainId.get(topicDomain.getApplicationDomainId()).add(topicDomain);
-		           	if (topicDomainsByBrokerType.get(topicDomain.getBrokerType()) == null) {
-		           		topicDomainsByBrokerType.put(topicDomain.getBrokerType(), new HashSet<>());
-		        	}
-		           	topicDomainsByBrokerType.get(topicDomain.getBrokerType()).add(topicDomain);
+//		           	if (topicDomainsByBrokerType.get(topicDomain.getBrokerType()) == null) {
+//		           		topicDomainsByBrokerType.put(topicDomain.getBrokerType(), new HashSet<>());
+//		        	}
+//		           	topicDomainsByBrokerType.get(topicDomain.getBrokerType()).add(topicDomain);
 		        }
 	        } while (((Map<?, ?>)topicDomainsReponse.getMeta().get("pagination")).get("nextPage") != null);
 	        System.out.printf("loadTopicDomains() took %dms.%n", System.currentTimeMillis() - start);
@@ -725,6 +734,92 @@ public enum EventPortalWrapper {
     	}
     }
 
+    
+    
+    private int fetchUsers(int page) {
+		Request request = new Request.Builder()
+				.url("https://api.solace.cloud/api/v0/users?page-number="+page)
+//				.header("pageSize", "5")
+		        .header("Authorization", token)
+				.get()
+				.build();
+		OkHttpClient client = new OkHttpClient();
+		
+		Call call = client.newCall(request);
+		try {
+			Response response = call.execute();
+//			System.out.println(response.code());
+			if (response.code() == 200) {
+//				System.out.println(response.body().toString());
+	            char[] buffer = new char[8 * 1024];
+	            StringBuilder sb = new StringBuilder();
+                int charsRead;
+                while ((charsRead = response.body().charStream().read(buffer)) != -1) {
+                	sb.append(buffer, 0, charsRead);
+                }
+//                System.out.println(sb.toString());
+                JsonObject jo = new Gson().fromJson(sb.toString(), JsonObject.class);
+                if (jo.has("data")) {
+                	JsonArray ar = jo.get("data").getAsJsonArray();
+                	for (int i=0; i<ar.size(); i++) {
+                		JsonObject user = ar.get(i).getAsJsonObject();
+                		try {
+	                		String id = user.get("userId").toString();
+	                		String fn = user.has("firstName") ? user.get("firstName").getAsString() : "<BLANK>";
+	                		String ln = user.has("lastName") ? user.get("lastName").getAsString() : "<BLANK>";
+	                		String email = user.has("email") ? user.get("email").getAsString() : "<NO EMAIL>";
+	                		String name = fn + " " + ln;
+	                		if (name.equals("<BLANK> <BLANK>")) {
+	                			name = email;
+	                		}
+	                		userNamesById.put(id, name);
+                		} catch (Throwable e) {
+                			System.err.println(e);
+                		}
+                	}
+                }
+                if (jo.has("meta") && jo.get("meta").getAsJsonObject().has("pages")) {
+                	JsonElement nextPage = jo.get("meta").getAsJsonObject().get("pages").getAsJsonObject().get("next-page");
+                	if (nextPage == null) {
+                		System.out.println("NULUUUUUUULLLL");
+                		return 0;
+                	} else if (nextPage.isJsonNull()) {
+                		System.out.println("JSON   NULUUUUUUULLLL");
+                		return 0;
+                	} else {
+                		System.out.println("Page is number " + nextPage.getAsInt());
+                		return nextPage.getAsInt();
+                	}
+                } else {
+                	return 0;
+                }
+			} else {  // response code != 200
+				BufferedReader reader = new BufferedReader(response.body().charStream());
+				String line;
+				while ((line = reader.readLine()) != null) {
+					System.err.println(line);
+				}
+				return -1;
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			return -1;
+		}
+    }
+    
+    
+    /** Hacky hacky for now, using v0 undocumented API */
+    public boolean loadUsersCustom() {
+    	int page=0;
+    	do {
+    		page = fetchUsers(page);
+    	} while (page > 0);
+    	if (page == -1) return false;
+    	return true;
+    }
+    
+    
+    
 
     
     
@@ -1017,6 +1112,14 @@ public enum EventPortalWrapper {
 	}
 	
 	
+	
+	public String getUserName(String id) {
+		return userNamesById.get(id);
+	}
+	
+	public Collection<String> getUserNames() {
+		return Collections.unmodifiableCollection(userNamesById.values());
+	}
 	
 	
 	

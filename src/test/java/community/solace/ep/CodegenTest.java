@@ -31,7 +31,7 @@ public class CodegenTest {
 	}
 
     @Test public void testSomeLibraryMethod() {
-        SchemaToPojo.Builder builder = new Builder().setSchemaVersionId("fkfgxsm5h8x")
+        SchemaToPojo.Builder builder = new Builder().setSchemaVersionId("uvkail7pnsb")
         		.setBasePackageName("com.solace.aaron.model")
         		.setFilePath("src/main/java");
         System.out.println(builder);
