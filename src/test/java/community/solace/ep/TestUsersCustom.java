@@ -58,10 +58,13 @@ public class TestUsersCustom {
     public void testLoader() throws ApiException, IOException {
         o.println("#####################################");
         EventPortalWrapper.INSTANCE.loadUsersCustom();
+        o.println(EventPortalWrapper.INSTANCE.getUserNames());
         o.println();
         o.println();
         o.println("#####################################");
-        
+        for (String userId : EventPortalWrapper.INSTANCE.getUserIds()) {
+        	o.println(userId + ": "+EventPortalWrapper.INSTANCE.getUserName(userId));
+        }
         
     }
 }

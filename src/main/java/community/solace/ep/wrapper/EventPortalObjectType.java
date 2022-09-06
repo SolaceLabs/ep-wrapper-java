@@ -27,35 +27,30 @@ import community.solace.ep.client.model.TopicDomain;
  */
 public enum EventPortalObjectType {
 
-	DOMAIN(ApplicationDomain.class, "Application Domain", "Domain"),
-	APPLICATION(Application.class, "Application", "App"),
-	APPLICATION_VERSION(ApplicationVersion.class, "Application Version", "App Ver"),
-	EVENT(Event.class, "Event", "Event"),
-	EVENT_VERSION(EventVersion.class, "Event Version", "Event Ver"),
-	SCHEMA(SchemaObject.class, "Schema", "Schema"),
-	SCHEMA_VERSION(SchemaVersion.class, "Schema Version", "Schema Ver"),
-	ENUM(TopicAddressEnum.class, "Topic Address Enum", "Enum"),
-	ENUM_VERSION(TopicAddressEnumVersion.class, "Topic Address Enum Version", "Enum Ver"),
-	EVENT_API(EventApi.class, "Event API", "Event API"),
-	EVENT_API_VERSION(EventApiVersion.class, "Event API Version", "Event API Ver"),
-	EVENT_API_PRODUCT(EventApiProduct.class, "", ""),
-	EVENT_API_PRODUCT_VERSION(EventApiProductVersion.class, "", ""),
-	CONSUMER(Consumer.class, "", ""),
-	EVENT_MESH(EventMesh.class, "", ""),
-	TOPIC_DOMAIN(TopicDomain.class, "", ""),
-	ENVIRONMENT(Environment.class, "", ""),
-	N_A(null, "", ""),
+	DOMAIN(ApplicationDomain.class),
+	APPLICATION(Application.class),
+	APPLICATION_VERSION(ApplicationVersion.class),
+	EVENT(Event.class),
+	EVENT_VERSION(EventVersion.class),
+	SCHEMA(SchemaObject.class),
+	SCHEMA_VERSION(SchemaVersion.class),
+	ENUM(TopicAddressEnum.class),
+	ENUM_VERSION(TopicAddressEnumVersion.class),
+	EVENT_API(EventApi.class),
+	EVENT_API_VERSION(EventApiVersion.class),
+	EVENT_API_PRODUCT(EventApiProduct.class),
+	EVENT_API_PRODUCT_VERSION(EventApiProductVersion.class),
+	CONSUMER(Consumer.class),
+	EVENT_MESH(EventMesh.class),
+	TOPIC_DOMAIN(TopicDomain.class),
+	ENVIRONMENT(Environment.class),
+	N_A(null),
 	;
 	
 	private final Class<?> clazz;
-	private final String fullName;
-	private final String shortName;
 	
-	
-	private EventPortalObjectType(Class<?> clazz, String fullName, String shortName) {
+	private EventPortalObjectType(Class<?> clazz) {
 		this.clazz = clazz;
-		this.fullName = fullName;
-		this.shortName = shortName;
 	}
 	
 	/*
@@ -70,9 +65,6 @@ public enum EventPortalObjectType {
 		return clazz;
 	}
 	
-	public String getShortName() {
-		return shortName;
-	}
 	
 	/**
 	 * Pass in a Swagger Event Portal object, and return a particular enum.
@@ -80,16 +72,16 @@ public enum EventPortalObjectType {
 	 * @return an enum describing the type of Event Portal object, or "N_A" if null or invalid
 	 */
 	public static EventPortalObjectType getType(Object object) {
-		if (object == null) return N_A;
+//		if (object == null) return N_A;
 		Class<? extends Object> clazz = object.getClass();
-		if (clazz.equals(DOMAIN.clazz)) return DOMAIN;
-		else if (clazz.equals(APPLICATION.clazz)) return APPLICATION;
-		else if (clazz.equals(APPLICATION_VERSION.clazz)) return APPLICATION_VERSION;
-		else if (clazz.equals(EVENT.clazz)) return EVENT;
-		else if (clazz.equals(EVENT_VERSION.clazz)) return EVENT_VERSION;
-		else if (clazz.equals(SCHEMA.clazz)) return SCHEMA;
-		else if (clazz.equals(SCHEMA_VERSION.clazz)) return SCHEMA_VERSION;
-		else if (clazz.equals(ENUM.clazz)) return ENUM;
+		if (clazz.equals(DOMAIN.clazz))						return DOMAIN;
+		else if (clazz.equals(APPLICATION.clazz))			return APPLICATION;
+		else if (clazz.equals(APPLICATION_VERSION.clazz))	return APPLICATION_VERSION;
+		else if (clazz.equals(EVENT.clazz))					return EVENT;
+		else if (clazz.equals(EVENT_VERSION.clazz))			return EVENT_VERSION;
+		else if (clazz.equals(SCHEMA.clazz))				return SCHEMA;
+		else if (clazz.equals(SCHEMA_VERSION.clazz))		return SCHEMA_VERSION;
+		else if (clazz.equals(ENUM.clazz))					return ENUM;
 		else if (clazz.equals(ENUM_VERSION.clazz)) return ENUM_VERSION;
 		else if (clazz.equals(EVENT_API.clazz)) return EVENT_API;
 		else if (clazz.equals(EVENT_API_VERSION.clazz)) return EVENT_API_VERSION;
@@ -100,5 +92,19 @@ public enum EventPortalObjectType {
 		return N_A;
 	}
 	
+	
+	
+	public Object getExample() {
+		switch (this) {
+		case DOMAIN: return EventPortalWrapper.INSTANCE.getDomains().toArray()[0];
+		case APPLICATION: return EventPortalWrapper.INSTANCE.getApplications().toArray()[0];
+		case APPLICATION_VERSION: return EventPortalWrapper.INSTANCE.getApplicationVersions().toArray()[0];
+		case EVENT: return EventPortalWrapper.INSTANCE.getEvents().toArray()[0];
+		case EVENT_VERSION: return EventPortalWrapper.INSTANCE.getEventVersions().toArray()[0];
+		case SCHEMA: return EventPortalWrapper.INSTANCE.getSchemas().toArray()[0];
+		case SCHEMA_VERSION: return EventPortalWrapper.INSTANCE.getSchemaVersions().toArray()[0];
+		default: return null;
+		}
+	}
 	
 }

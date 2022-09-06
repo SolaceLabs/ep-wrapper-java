@@ -2,17 +2,17 @@ package community.solace.ep.wrapper;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -327,11 +327,19 @@ public enum EventPortalWrapper {
 	        	for (Application app : response2.getData()) {
 	        		applicationsById.put(app.getId(), app);
 	        		if (applicationsByDomainId.get(app.getApplicationDomainId()) == null) {
-	        			applicationsByDomainId.put(app.getApplicationDomainId(), new HashSet<>());
+	        			applicationsByDomainId.put(app.getApplicationDomainId(), new LinkedHashSet<>());
 	        		}
 	        		applicationsByDomainId.get(app.getApplicationDomainId()).add(app);
 	        	}
 	        } while (((Map<?, ?>)response2.getMeta().get("pagination")).get("nextPage") != null);
+	        // time to sort
+//	        for (String domainId : applicationsByDomainId.keySet()) {
+//	        	applicationsByDomainId.get(domainId);
+////	        	List<String> appNames = new ArrayList<>(applicationsByDomainId.get(domainId));
+//	        	
+//	        	
+//	        	
+//	        }
 	        
 	        // app versions
 	        applicationVersionsById = new LinkedHashMap<>();
@@ -343,7 +351,7 @@ public enum EventPortalWrapper {
 	            for (ApplicationVersion appVer : response3.getData()) {
 	            	applicationVersionsById.put(appVer.getId(), appVer);
 	            	if (applicationVersionsByApplicatoinId.get(appVer.getApplicationId()) == null) {
-	            		applicationVersionsByApplicatoinId.put(appVer.getApplicationId(), new HashSet<>());
+	            		applicationVersionsByApplicatoinId.put(appVer.getApplicationId(), new LinkedHashSet<>());
 	            	}
 	            	applicationVersionsByApplicatoinId.get(appVer.getApplicationId()).add(appVer);
 	            }
@@ -372,7 +380,7 @@ public enum EventPortalWrapper {
 		        for (Event event : eventsReponse.getData()) {
 		        	eventsById.put(event.getId(), event);
 		        	if (eventsByDomainId.get(event.getApplicationDomainId()) == null) {
-		        		eventsByDomainId.put(event.getApplicationDomainId(), new HashSet<>());
+		        		eventsByDomainId.put(event.getApplicationDomainId(), new LinkedHashSet<>());
 		        	}
 		        	eventsByDomainId.get(event.getApplicationDomainId()).add(event);
 		        }
@@ -388,7 +396,7 @@ public enum EventPortalWrapper {
 	        	for (EventVersion eventVersion : eventVersionsResponse.getData()) {
 	        		eventVersionsById.put(eventVersion.getId(), eventVersion);
 	        		if (eventVersionsByEventId.get(eventVersion.getEventId()) == null) {
-	        			eventVersionsByEventId.put(eventVersion.getEventId(), new HashSet<>());
+	        			eventVersionsByEventId.put(eventVersion.getEventId(), new LinkedHashSet<>());
 	        		}
 	        		eventVersionsByEventId.get(eventVersion.getEventId()).add(eventVersion);
 	        	}
@@ -417,7 +425,7 @@ public enum EventPortalWrapper {
 		        for (SchemaObject schema : schemasReponse.getData()) {
 		        	schemasById.put(schema.getId(), schema);
 		        	if (schemasByDomainId.get(schema.getApplicationDomainId()) == null) {
-		        		schemasByDomainId.put(schema.getApplicationDomainId(), new HashSet<>());
+		        		schemasByDomainId.put(schema.getApplicationDomainId(), new LinkedHashSet<>());
 		        	}
 		        	schemasByDomainId.get(schema.getApplicationDomainId()).add(schema);
 		        }
@@ -434,7 +442,7 @@ public enum EventPortalWrapper {
 	        	for (SchemaVersion schemaVersion : schemaVersionsResponse.getData()) {
 	        		schemaVersionsById.put(schemaVersion.getId(), schemaVersion);
 	        		if (schemaVersionsBySchemaId.get(schemaVersion.getSchemaId()) == null) {
-	        			schemaVersionsBySchemaId.put(schemaVersion.getSchemaId(), new HashSet<>());
+	        			schemaVersionsBySchemaId.put(schemaVersion.getSchemaId(), new LinkedHashSet<>());
 	        		}
 	        		schemaVersionsBySchemaId.get(schemaVersion.getSchemaId()).add(schemaVersion);
 	        	}
@@ -446,7 +454,7 @@ public enum EventPortalWrapper {
 	//        	SchemaVersion schemaVersion = schemasApi.getSchemaVersion(eventVersionsById.get(eventVersionId).getSchemaVersionId()).getData();
 	//        	schemaVersionsById.put(schemaVersion.getId(), schemaVersion);
 	//    		if (schemaVersionsBySchemaId.get(schemaVersion.getSchemaId()) == null) {
-	//    			schemaVersionsBySchemaId.put(schemaVersion.getSchemaId(), new HashSet<>());
+	//    			schemaVersionsBySchemaId.put(schemaVersion.getSchemaId(), new LinkedHashSet<>());
 	//    		}
 	//    		schemaVersionsBySchemaId.get(schemaVersion.getSchemaId()).add(schemaVersion);
 	//        }
@@ -474,7 +482,7 @@ public enum EventPortalWrapper {
 		        for (TopicAddressEnum topicAddressEnum : enumsReponse.getData()) {
 		        	enumsById.put(topicAddressEnum.getId(), topicAddressEnum);
 		        	if (enumsByDomainId.get(topicAddressEnum.getApplicationDomainId()) == null) {
-		        		enumsByDomainId.put(topicAddressEnum.getApplicationDomainId(), new HashSet<>());
+		        		enumsByDomainId.put(topicAddressEnum.getApplicationDomainId(), new LinkedHashSet<>());
 		        	}
 		        	enumsByDomainId.get(topicAddressEnum.getApplicationDomainId()).add(topicAddressEnum);
 		        }
@@ -490,7 +498,7 @@ public enum EventPortalWrapper {
 	        	for (TopicAddressEnumVersion enumVersion : enumVersionsResponse.getData()) {
 	        		enumVersionsById.put(enumVersion.getId(), enumVersion);
 	        		if (enumVersionsByEnumId.get(enumVersion.getEnumId()) == null) {
-	        			enumVersionsByEnumId.put(enumVersion.getEnumId(), new HashSet<>());
+	        			enumVersionsByEnumId.put(enumVersion.getEnumId(), new LinkedHashSet<>());
 	        		}
 	        		enumVersionsByEnumId.get(enumVersion.getEnumId()).add(enumVersion);
 	        	}
@@ -519,7 +527,7 @@ public enum EventPortalWrapper {
 		        for (EventApi eventApi : eventApisReponse.getData()) {
 		        	eventApisById.put(eventApi.getId(), eventApi);
 		        	if (eventApisByDomainId.get(eventApi.getApplicationDomainId()) == null) {
-		        		eventApisByDomainId.put(eventApi.getApplicationDomainId(), new HashSet<>());
+		        		eventApisByDomainId.put(eventApi.getApplicationDomainId(), new LinkedHashSet<>());
 		        	}
 		        	eventApisByDomainId.get(eventApi.getApplicationDomainId()).add(eventApi);
 		        }
@@ -535,7 +543,7 @@ public enum EventPortalWrapper {
 	        	for (EventApiVersion eventApiVersion : eventApiVersionsResponse.getData()) {
 	        		eventApiVersionsById.put(eventApiVersion.getId(), eventApiVersion);
 	        		if (eventApiVersionsByEventApiId.get(eventApiVersion.getEventApiId()) == null) {
-	        			eventApiVersionsByEventApiId.put(eventApiVersion.getEventApiId(), new HashSet<>());
+	        			eventApiVersionsByEventApiId.put(eventApiVersion.getEventApiId(), new LinkedHashSet<>());
 	        		}
 	        		eventApiVersionsByEventApiId.get(eventApiVersion.getEventApiId()).add(eventApiVersion);
 	        	}
@@ -564,7 +572,7 @@ public enum EventPortalWrapper {
 		        for (EventApiProduct eventApiProduct : eventApiProductsReponse.getData()) {
 		        	eventApiProductsById.put(eventApiProduct.getId(), eventApiProduct);
 		        	if (eventApiProductsByDomainId.get(eventApiProduct.getApplicationDomainId()) == null) {
-		        		eventApiProductsByDomainId.put(eventApiProduct.getApplicationDomainId(), new HashSet<>());
+		        		eventApiProductsByDomainId.put(eventApiProduct.getApplicationDomainId(), new LinkedHashSet<>());
 		        	}
 		        	eventApiProductsByDomainId.get(eventApiProduct.getApplicationDomainId()).add(eventApiProduct);
 		        }
@@ -576,11 +584,12 @@ public enum EventPortalWrapper {
 	        EventApiProductVersionsResponse eventApiProductVersionsResponse;
 	        page = 1;
 	        do {
-	        	eventApiProductVersionsResponse = eventApiProductsApi.getEventApiProductVersions(PAGE_SIZE, page++, null, null, null);
+	        	eventApiProductVersionsResponse = eventApiProductsApi.getEventApiProductVersions(PAGE_SIZE, page++, null, null, null, null);
 	        	for (EventApiProductVersion eventApiProductVersion : eventApiProductVersionsResponse.getData()) {
+	        		System.out.println(eventApiProductVersion);
 	        		eventApiProductVersionsById.put(eventApiProductVersion.getId(), eventApiProductVersion);
 	        		if (eventApiProductVersionsByEventApiProductId.get(eventApiProductVersion.getEventApiProductId()) == null) {
-	        			eventApiProductVersionsByEventApiProductId.put(eventApiProductVersion.getEventApiProductId(), new HashSet<>());
+	        			eventApiProductVersionsByEventApiProductId.put(eventApiProductVersion.getEventApiProductId(), new LinkedHashSet<>());
 	        		}
 	        		eventApiProductVersionsByEventApiProductId.get(eventApiProductVersion.getEventApiProductId()).add(eventApiProductVersion);
 	        	}
@@ -630,7 +639,7 @@ public enum EventPortalWrapper {
 		        for (Consumer consumer : consumersReponse.getData()) {
 		        	consumersById.put(consumer.getId(), consumer);
 		        	if (consumersByApplicationVersionId.get(consumer.getApplicationVersionId()) == null) {
-		        		consumersByApplicationVersionId.put(consumer.getApplicationVersionId(), new HashSet<>());
+		        		consumersByApplicationVersionId.put(consumer.getApplicationVersionId(), new LinkedHashSet<>());
 		        	}
 		        	consumersByApplicationVersionId.get(consumer.getApplicationVersionId()).add(consumer);
 		        }
@@ -659,11 +668,11 @@ public enum EventPortalWrapper {
 		        for (EventMesh eventMesh : eventMeshesReponse.getData()) {
 		        	eventMeshesById.put(eventMesh.getId(), eventMesh);
 		        	if (eventMeshesByEnvironmentId.get(eventMesh.getEnvironmentId()) == null) {
-		        		eventMeshesByEnvironmentId.put(eventMesh.getEnvironmentId(), new HashSet<>());
+		        		eventMeshesByEnvironmentId.put(eventMesh.getEnvironmentId(), new LinkedHashSet<>());
 		        	}
 		        	eventMeshesByEnvironmentId.get(eventMesh.getEnvironmentId()).add(eventMesh);
 //		        	if (eventMeshesByBrokerType.get(eventMesh.get) == null) {
-//		        		eventMeshesByBrokerType.put(eventMesh.getBrokerType(), new HashSet<>());
+//		        		eventMeshesByBrokerType.put(eventMesh.getBrokerType(), new LinkedHashSet<>());
 //		        	}
 //		        	eventMeshesByBrokerType.get(eventMesh.getBrokerType()).add(eventMesh);
 		        }
@@ -691,11 +700,11 @@ public enum EventPortalWrapper {
 		        for (TopicDomain topicDomain : topicDomainsReponse.getData()) {
 //		        	topicDomainsById.put(topicDomain.getgetId(), topicDomain);
 		           	if (topicDomainsByDomainId.get(topicDomain.getApplicationDomainId()) == null) {
-		           		topicDomainsByDomainId.put(topicDomain.getApplicationDomainId(), new HashSet<>());
+		           		topicDomainsByDomainId.put(topicDomain.getApplicationDomainId(), new LinkedHashSet<>());
 		        	}
 		           	topicDomainsByDomainId.get(topicDomain.getApplicationDomainId()).add(topicDomain);
 //		           	if (topicDomainsByBrokerType.get(topicDomain.getBrokerType()) == null) {
-//		           		topicDomainsByBrokerType.put(topicDomain.getBrokerType(), new HashSet<>());
+//		           		topicDomainsByBrokerType.put(topicDomain.getBrokerType(), new LinkedHashSet<>());
 //		        	}
 //		           	topicDomainsByBrokerType.get(topicDomain.getBrokerType()).add(topicDomain);
 		        }
@@ -739,7 +748,7 @@ public enum EventPortalWrapper {
     private int fetchUsers(int page) {
 		Request request = new Request.Builder()
 				.url("https://api.solace.cloud/api/v0/users?page-number="+page)
-//				.header("pageSize", "5")
+				.header("pageSize", "50")
 		        .header("Authorization", token)
 				.get()
 				.build();
@@ -764,7 +773,7 @@ public enum EventPortalWrapper {
                 	for (int i=0; i<ar.size(); i++) {
                 		JsonObject user = ar.get(i).getAsJsonObject();
                 		try {
-	                		String id = user.get("userId").toString();
+	                		String id = user.get("userId").getAsString();
 	                		String fn = user.has("firstName") ? user.get("firstName").getAsString() : "<BLANK>";
 	                		String ln = user.has("lastName") ? user.get("lastName").getAsString() : "<BLANK>";
 	                		String email = user.has("email") ? user.get("email").getAsString() : "<NO EMAIL>";
@@ -781,13 +790,13 @@ public enum EventPortalWrapper {
                 if (jo.has("meta") && jo.get("meta").getAsJsonObject().has("pages")) {
                 	JsonElement nextPage = jo.get("meta").getAsJsonObject().get("pages").getAsJsonObject().get("next-page");
                 	if (nextPage == null) {
-                		System.out.println("NULUUUUUUULLLL");
+//                		System.out.println("NULUUUUUUULLLL");
                 		return 0;
                 	} else if (nextPage.isJsonNull()) {
-                		System.out.println("JSON   NULUUUUUUULLLL");
+//                		System.out.println("JSON   NULUUUUUUULLLL");
                 		return 0;
                 	} else {
-                		System.out.println("Page is number " + nextPage.getAsInt());
+//                		System.out.println("Page is number " + nextPage.getAsInt());
                 		return nextPage.getAsInt();
                 	}
                 } else {
@@ -810,11 +819,17 @@ public enum EventPortalWrapper {
     
     /** Hacky hacky for now, using v0 undocumented API */
     public boolean loadUsersCustom() {
+    	long start = System.currentTimeMillis();
+    	userNamesById = new LinkedHashMap<>();
     	int page=0;
     	do {
     		page = fetchUsers(page);
     	} while (page > 0);
-    	if (page == -1) return false;
+    	if (page == -1) {
+    		return false;
+    	}
+        System.out.printf("loadUsersCustom() took %dms.  %d Users loaded.%n", System.currentTimeMillis() - start, userNamesById.size());
+        System.out.println(userNamesById.keySet());
     	return true;
     }
     
@@ -1114,9 +1129,14 @@ public enum EventPortalWrapper {
 	
 	
 	public String getUserName(String id) {
+//		return String.format("%d Users loaded, *%s* (%d), *%s*, %b, %s, closest=%s", userNamesById.size(), id, id.length(), newId, userNamesById.containsKey(id), userNamesById.get(id), closest);
 		return userNamesById.get(id);
 	}
-	
+
+	public Collection<String> getUserIds() {
+		return Collections.unmodifiableCollection(userNamesById.keySet());
+	}
+
 	public Collection<String> getUserNames() {
 		return Collections.unmodifiableCollection(userNamesById.values());
 	}
@@ -1164,6 +1184,50 @@ public enum EventPortalWrapper {
 		int i = (int)(Math.random() * eventVersionsById.size());
 		return eventVersionsById.values().stream().skip(i).findAny().orElse(null);
 	}
+	
+	public String getRandomUserName() {
+		int i = (int)(Math.random() * userNamesById.size());
+		return userNamesById.values().stream().skip(i).findAny().orElse(null);
+	}
+	
+	public String getAsyncApiForAppVerId(String appVerId, boolean prettyPrint) {
+		ApiClient apiClient = getApiClient();
+		ApplicationsApi api = new ApplicationsApi(apiClient);
+//		api.getAsyncApiForApplicationVersion(appVer.getId(), "json", "2.0.0");
+		try {
+			Object treeMap = api.getAsyncApiForApplicationVersion(appVerId, null, null);
+			if (prettyPrint) {
+				String json = new GsonBuilder().setPrettyPrinting().create().toJson(treeMap);
+				return json;
+			} else {
+				String json = new Gson().toJson(treeMap);
+				return json;
+			}
+		} catch (ApiException e) {
+			System.err.println(e.getResponseBody());
+			return null;
+		}
+	}
+	
+	public String getAsyncApiForEventApiVerId(String eventApiVerId, boolean prettyPrint) {
+		ApiClient apiClient = getApiClient();
+		EventApIsApi api = new EventApIsApi(apiClient);
+//		api.getAsyncApiForApplicationVersion(appVer.getId(), "json", "2.0.0");
+		try {
+			Object treeMap = api.getAsyncApiForEventApiVersion(eventApiVerId, null, null, null);
+			if (prettyPrint) {
+				String json = new GsonBuilder().setPrettyPrinting().create().toJson(treeMap);
+				return json;
+			} else {
+				String json = new Gson().toJson(treeMap);
+				return json;
+			}
+		} catch (ApiException e) {
+			System.err.println(e.getResponseBody());
+			return null;
+		}
+	}
+	
 
 	/**
 	 * Semi-useful method to find all Applications (not versions) using any version of
@@ -1175,8 +1239,8 @@ public enum EventPortalWrapper {
 		
 		Set<EventVersion> eventVersions = getEventVersionsForEventId(eventId);
 		if (eventVersions == null) return Collections.emptySet();
-		Set<Application> apps = new HashSet<>();
-		Set<String> appDescs = new HashSet<>();
+		Set<Application> apps = new LinkedHashSet<>();
+		Set<String> appDescs = new LinkedHashSet<>();
 		for (EventVersion eventVersion : eventVersions) {
 			for (String appVerId : eventVersion.getDeclaredConsumingApplicationVersionIds()) {
 				Application app = getApplication(getApplicationVersion(appVerId).getApplicationId());
