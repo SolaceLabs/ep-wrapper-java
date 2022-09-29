@@ -15,7 +15,7 @@ WINDOWS:
 gradlew clean assemble javadoc
 ```
 
-The distribution JAR will be found in `build/distributions/`
+The compiled JAR will be found in `build/libs/`
 
 
 ## Using with EP 2.0 IntelliJ Plugin
