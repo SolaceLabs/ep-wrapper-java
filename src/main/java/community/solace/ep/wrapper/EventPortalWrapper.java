@@ -797,17 +797,20 @@ public enum EventPortalWrapper {
     
     private int fetchUsers(int page) {
 		Request request = new Request.Builder()
-				.url("https://api.solace.cloud/api/v0/users?page-number="+page)
+				.url("https://api.solace.cloud/api/v0/users?page-size=" + PAGE_SIZE + "&page-number=" + page)
 //				.url("https://api.solace.cloud/api/v2/architecture/eventApiProductVersions")
-				.header("pageSize", "50")
+//				.header("pageSize", Integer.toString(PAGE_SIZE))
 		        .header("Authorization", token)
 				.get()
 				.build();
 		OkHttpClient client = new OkHttpClient();
 		
+		long start = System.currentTimeMillis();
 		Call call = client.newCall(request);
 		try {
 			Response response = call.execute();
+            System.out.printf("fetchUsers() took %dms for HTTP call.%n", System.currentTimeMillis() - start);
+            start = System.currentTimeMillis();
 			if (response.code() == 200) {
 	            char[] buffer = new char[8 * 1024];
 	            StringBuilder sb = new StringBuilder();
@@ -816,6 +819,7 @@ public enum EventPortalWrapper {
                 	sb.append(buffer, 0, charsRead);
                 }
                 JsonObject jo = new Gson().fromJson(sb.toString(), JsonObject.class);
+                System.out.printf("fetchUsers() took %dms to deserialize into JSON object.%n", System.currentTimeMillis() - start);
                 if (jo.has("data")) {
                 	JsonArray ar = jo.get("data").getAsJsonArray();
                 	for (int i=0; i<ar.size(); i++) {
