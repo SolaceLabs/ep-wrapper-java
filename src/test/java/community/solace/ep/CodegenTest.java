@@ -5,16 +5,24 @@ package community.solace.ep;
 
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Properties;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import community.solace.ep.client.ApiClient;
+import community.solace.ep.client.ApiException;
+import community.solace.ep.client.api.SchemasApi;
+import community.solace.ep.client.model.SchemaVersion;
+import community.solace.ep.client.model.SchemaVersionResponse;
 import community.solace.ep.wrapper.EventPortalWrapper;
+import community.solace.ep.wrapper.FileUtil;
 import community.solace.ep.wrapper.SchemaToPojo;
-import community.solace.ep.wrapper.SchemaToPojo.Builder;
+import community.solace.ep.wrapper.SchemaToPojo.BuilderFromSchema;
 
 public class CodegenTest {
 	
@@ -23,18 +31,52 @@ public class CodegenTest {
     	try {
 			p.load(new FileInputStream("token.properties"));
 			EventPortalWrapper.INSTANCE.setToken(p.getProperty("token"));
-	    	EventPortalWrapper.INSTANCE.loadAll();
+//	    	EventPortalWrapper.INSTANCE.loadAll();
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);
 		}
 	}
 
-    @Test public void testSomeLibraryMethod() {
-        SchemaToPojo.Builder builder = new Builder().setSchemaVersionId("uvkail7pnsb")
-        		.setBasePackageName("com.solace.aaron.model")
+//    @Test public void testSomeLibraryMethod() {
+//        SchemaToPojo.Builder builder = new Builder().setSchemaVersionId("uvkail7pnsb")
+//        		.setBasePackageName("com.solace.aaron.model")
+//        		.setFilePath("src/main/java");
+//        System.out.println(builder);
+//        assertTrue("builder.build() should return 'true'", builder.build());
+//    }
+//    
+    
+    @Test public void codeGenFromSchema() throws ApiException {
+    	ApiClient client = EventPortalWrapper.INSTANCE.getApiClient();
+    	SchemaVersionResponse response = new SchemasApi(client).getSchemaVersion("uvkail7pnsb");
+    	SchemaVersion sv = response.getData();
+    	
+    	
+        SchemaToPojo.BuilderFromSchema builder = new BuilderFromSchema(new SchemasApi(client).getSchema(sv.getSchemaId()).getData(), response.getData());
+        builder.setBasePackageName("com.solace.aaron.model")
         		.setFilePath("src/main/java");
         System.out.println(builder);
         assertTrue("builder.build() should return 'true'", builder.build());
     }
+    
+    
+    @Test public void codeGenFromText() throws ApiException, FileNotFoundException {
+    	ApiClient client = EventPortalWrapper.INSTANCE.getApiClient();
+    	SchemaVersionResponse response = new SchemasApi(client).getSchemaVersion("uvkail7pnsb");
+    	SchemaVersion sv = response.getData();
+    	
+    	
+        SchemaToPojo.BuilderFromSchema builder = new BuilderFromSchema(new SchemasApi(client).getSchema(sv.getSchemaId()).getData(), response.getData());
+        builder.setBasePackageName("com.solace.aaron.nested")
+        		.setFilePath("src/main/java");
+        builder.setSchemaContentText(FileUtil.loadTextFile(new File("AaronNested.json")));
+        System.out.println(builder);
+        assertTrue("builder.build() should return 'true'", builder.build());
+    }
+    
+
+    
+    
+    
 }

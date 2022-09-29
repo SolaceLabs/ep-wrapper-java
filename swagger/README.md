@@ -52,6 +52,8 @@ This file can either be used locally in a `lib` folder, or copied over into Mave
 
 # TBD: OpenAPITools Codegen
 
+## NONE OF THIS WORKS YET
+
 This would be the preferred auto-codegen tool, as it is more active and more community supported.  It forked from the Swagger codegen a while ago.
 
 However, it does not / cannot build our current verison of the EP API.  Once it does, we'll probably migrate to that.
@@ -68,6 +70,7 @@ java -jar openapi-generator-cli.jar generate \
  -g java \
  -i ./api-docs-v2.json \
  -o out2 \
+ -c ./openapi-config.json \
  --invoker-package community.solace.ep.client \
  --model-package community.solace.ep.client.model \
  --api-package community.solace.ep.client.api \
@@ -76,6 +79,16 @@ java -jar openapi-generator-cli.jar generate \
  --artifact-version 0.0.0
 
 ```
+
+```
+java -jar openapi-generator-cli.jar help generate
+java -jar openapi-generator-cli.jar config-help -g java
+--strict-spec
+--skip-validate-spec
+ignoreAnyOfInEnum
+
+```
+
 
 ```
 [main] WARN  o.o.codegen.DefaultCodegen - 'BaseMessagingServiceDTO' defines discriminator 'type', but the referenced schema 'SolaceMessagingService' is incorrect. invalid optional definition of type, include it in required

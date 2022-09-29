@@ -19,9 +19,8 @@ import community.solace.ep.client.model.SchemaVersion;
 
 public class SchemaToPojo {
 
-	
-	public static class Builder {
-		
+	public static abstract class Builder {
+
 		public enum PayloadType {
 			JSON,
 		}
@@ -30,15 +29,20 @@ public class SchemaToPojo {
 			GSON,
 		}
 		
-		private PayloadType payloadType = PayloadType.JSON;
-		private String filePath = "";
-		private String basePackageName = "";
-		private String schemaVersionId;
-		private String packageNameSuffix = "";  // auto-update
-		private String className = "";  // auto-update
-		private String version = "";  // auto-update
+		protected String schemaContents = "";
+		protected PayloadType payloadType = PayloadType.JSON;
+		protected String filePath = "tmp";
+		protected String basePackageName = "org.example";
+		
+		protected String packageNameSuffix = "suffix";
+		protected String className = "DefaultClass";
+		protected String version = "000000";
 
-
+		public Builder setSchemaContentText(String schemaContents) {
+			this.schemaContents = schemaContents;
+			return this;
+		}
+		
 		public Builder setFilePath(String filePath) {
 			this.filePath = filePath;
 			return this;
@@ -49,14 +53,107 @@ public class SchemaToPojo {
 			return this;
 		}
 		
-		public Builder setEventVersionId(String eventVersionId) {
-			EventVersion eventVersion = EventPortalWrapper.INSTANCE.getEventVersion(eventVersionId);
-			return this.setSchemaVersionId(eventVersion.getSchemaVersionId());
+		public String getSchema() {
+			return schemaContents;
+		}
+
+		public PayloadType getPayloadType() {
+			return payloadType;
+		}
+
+		public String getFilePath() {
+			return filePath;
+		}
+
+		public String getBasePackageName() {
+			return basePackageName;
 		}
 		
-		public Builder setSchemaVersionId(String schemaVersionId) {
-			this.schemaVersionId = schemaVersionId;
-//			if (!smartUpdate) return this;
+		public String getPackageNameSuffix() {
+			return packageNameSuffix;
+		}
+
+		public String getClassName() {
+			return className;
+		}
+		
+		public String getVersion() {
+			return version;
+		}
+
+	}
+	
+	
+	public static class BuilderFromSchema extends Builder {
+
+		private final SchemaObject schema;
+		private final SchemaVersion schemaVersion;
+		
+		public BuilderFromSchema(SchemaObject schema, SchemaVersion schemaVersion) {
+			if (schemaVersion == null) throw new IllegalArgumentException("Cannot use null schema version!");
+			this.schema = schema;
+			this.schemaVersion = schemaVersion;
+			setSchemaVersion();
+		}
+
+		private BuilderFromSchema setEventVersionId(String eventVersionId) {
+			EventVersion eventVersion = EventPortalWrapper.INSTANCE.getEventVersion(eventVersionId);
+			return this.setSchemaVersion();
+		}
+		
+		private BuilderFromSchema setSchemaVersion() {
+	    	this.setSchemaContentText(schemaVersion.getContent());
+//	    	SchemaObject schema = EventPortalWrapper.INSTANCE.getSchema(schemaVersion.getSchemaId());
+	    	className = schema.getName();
+	    	if (className == null || className.isEmpty()) {
+	    		className = "Test";
+	    	}
+	    	className = className.replaceAll("[^a-zA-Z0-9]", "");
+	    	className = className.replaceAll("(?i)schema", "");  // drop the word "schema" from the object (if it contains it)
+	    	if (className.isEmpty()) {
+	    		className = "Test";
+	    	}
+	    	className = className.substring(0,1).toUpperCase() + (className.length() > 1 ? className.substring(1) : "");
+	    	version = schemaVersion.getVersion();
+	    	version = "v" + version.replaceAll("[^0-9]", "");
+	    	packageNameSuffix = className.toLowerCase() + "." + version;
+			return this;
+		}
+		
+		
+
+		public SchemaVersion getSchemaVersion() {
+			return schemaVersion;
+		}
+
+		public boolean build() {
+			try {
+				buildPojoJsonJackson2(this);
+				return true;
+			} catch (Exception e) {
+				e.printStackTrace();
+				return false;
+			}
+			
+			
+		}
+
+		@Override
+		public String toString() {
+			return "Builder [payloadType=" + payloadType + ", filePath=" + filePath + ", basePackageName="
+					+ basePackageName + ", packageNameSuffix=" + packageNameSuffix + ", schemaVersionId="
+					+ schemaVersion.getId() + ", className=" + className + ", version=" + version + "]";
+		}
+		
+	}
+
+	
+	
+	public static class BuilderFromText extends Builder {
+
+		
+		
+		private BuilderFromText notUsedSetSchemaVersionId(String schemaVersionId) {
 			// else...
 	    	SchemaVersion schemaVersion = EventPortalWrapper.INSTANCE.getSchemaVersion(schemaVersionId);
 	    	if (schemaVersion == null) throw new IllegalArgumentException("Cannot find schema version "+schemaVersionId);
@@ -76,34 +173,9 @@ public class SchemaToPojo {
 	    	packageNameSuffix = className.toLowerCase() + "." + version;
 			return this;
 		}
-
-		public PayloadType getPayloadType() {
-			return payloadType;
-		}
-
-		public String getFilePath() {
-			return filePath;
-		}
-
-		public String getBasePackageName() {
-			return basePackageName;
-		}
-
-		public String getSchemaVersionId() {
-			return schemaVersionId;
-		}
-
-		public String getClassName() {
-			return className;
-		}
-
-		public String getVersion() {
-			return version;
-		}
 		
-		public String getPackageNameSuffix() {
-			return packageNameSuffix;
-		}
+		
+
 		
 //		@Override
 //		public String toString() {
@@ -129,12 +201,12 @@ public class SchemaToPojo {
 		@Override
 		public String toString() {
 			return "Builder [payloadType=" + payloadType + ", filePath=" + filePath + ", basePackageName="
-					+ basePackageName + ", packageNameSuffix=" + packageNameSuffix + ", schemaVersionId="
-					+ schemaVersionId + ", className=" + className + ", version=" + version + "]";
+					+ basePackageName + ", packageNameSuffix=" + packageNameSuffix + ", className="
+					+ className + ", version=" + version + "]";
 		}
 		
 	}
-	
+
 	
     private static void buildPojoJsonJackson2(SchemaToPojo.Builder builder) throws IOException {
     	
@@ -156,7 +228,7 @@ public class SchemaToPojo {
 //    	URL source = Example.class.getResource("/schema/required.json");
     	SchemaMapper mapper = new SchemaMapper(new RuleFactory(config, new Jackson2Annotator(config), new SchemaStore()), new SchemaGenerator());
 //    	SchemaMapper mapper = new SchemaMapper(new RuleFactory(config, new GsonAnnotator(config), new SchemaStore()), new SchemaGenerator());
-    	mapper.generate(codeModel, builder.getClassName(), packageName, EventPortalWrapper.INSTANCE.getSchemaVersion(builder.getSchemaVersionId()).getContent());
+    	mapper.generate(codeModel, builder.getClassName(), packageName, builder.getSchema());
     	
     	File location = new File(builder.getFilePath());
     	location.mkdirs();

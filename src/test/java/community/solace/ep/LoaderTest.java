@@ -3,7 +3,9 @@ package community.solace.ep;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -14,6 +16,8 @@ import javax.swing.tree.MutableTreeNode;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import com.google.gson.Gson;
 
 import community.solace.ep.client.ApiException;
 import community.solace.ep.client.model.Address;
@@ -439,6 +443,15 @@ keySchemaPrimitiveType: null
     	o.println(ev.getDeliveryDescriptor().getKeySchemaVersionId());
     	o.println(ev.getDeliveryDescriptor().getKeySchemaPrimitiveType());
     	o.println();
+    	
+    	
+    	Gson gson = new Gson();
+    	List<Object> test = new ArrayList<>();
+//    	gson.toJ
+    	
+    	
+    	
+    	
     }
 
     
@@ -451,9 +464,9 @@ keySchemaPrimitiveType: null
 			EventPortalWrapper.INSTANCE.setToken(p.getProperty("token"));
 			ExecutorService pool = Executors.newFixedThreadPool(8);
 			
-			if (!EventPortalWrapper.INSTANCE.loadAll(pool)) {
-				System.err.println("COUldn't load!!!   " + EventPortalWrapper.INSTANCE.getLoadException());
-				throw new RuntimeException(EventPortalWrapper.INSTANCE.getLoadException());
+			if (!EventPortalWrapper.INSTANCE.loadAll()) {
+				System.err.println("COUldn't load!!!   " + EventPortalWrapper.INSTANCE.getLoadErrorString());
+				throw new RuntimeException(EventPortalWrapper.INSTANCE.getLoadErrorString().toString());
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -489,6 +502,13 @@ keySchemaPrimitiveType: null
         test1("kdcce3vxdup");
         test1("9imb4qc38rh");
         test1("a7gf2ygh07z");
+        
+        
+        
+        SchemaVersion sv = EventPortalWrapper.INSTANCE.getSchemaVersion("8uzd4xis5i9");
+        o.println(sv.getContent());
+        
+        final EventPortalWrapper EP = EventPortalWrapper.INSTANCE;
         
         
         

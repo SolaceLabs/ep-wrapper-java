@@ -22,10 +22,16 @@ repositories {
 
 dependencies {
     implementation fileTree(dir: 'lib', include: '*.jar')  // EP 2.0 API Swagger codegen
+
     // for swagger:  (used to be runtimeOnly but now we're using some of these libraries)
     implementation group: 'com.squareup.okhttp', name: 'okhttp', version: '2.7.5'
     implementation group: 'io.gsonfire', name: 'gson-fire', version: '1.8.5'
     implementation group: 'org.threeten', name: 'threetenbp', version: '1.6.0'
+
+    // for OpenAPI Tools:
+    //implementation 'com.squareup.okhttp3:okhttp:4.9.3'
+    
+
 
     implementation group: 'org.jsonschema2pojo', name: 'jsonschema2pojo-core', version:'1.1.2'  // for Java codegen
     implementation group: 'javax.annotation', name:'javax.annotation-api', version:'1.3.2'      // for loading any generated code

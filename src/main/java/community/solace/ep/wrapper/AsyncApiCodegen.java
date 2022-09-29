@@ -60,10 +60,11 @@ public class AsyncApiCodegen {
 			super();
 			this.template = Template.SPRING_CLOUD_STREAM;
 			withParam("binder", "solace").withParam("dynamicType", "header");
-//			withParam("javaPackage", "com.solace.test.aaron");
-//			withParam("host", "localhost");
-//			withParam("msgVpn", "default");
-//			withParam("username", "aaron");
+			withParam("javaPackage", "com.example");
+			withGroupId("com.example");
+			withParam("host", "tcp://localhost:55555");
+			withParam("msgVpn", "default");
+			withParam("username", "aaron");
 
 		}
 		
@@ -74,6 +75,11 @@ public class AsyncApiCodegen {
 		public SolaceSpringCloudStreamBuilder withArtifactId(String artifactId) {
 			return (SolaceSpringCloudStreamBuilder)withParam("artifactId", artifactId);
 		}
+		
+		public SolaceSpringCloudStreamBuilder withGroupId(String groupId) {
+			return (SolaceSpringCloudStreamBuilder)withParam("groupId", groupId);
+		}
+
 		
 		/** e.g. "tcps://192.168.23.34:55443"; default == "tcp://localhost:55555" */
 		public SolaceSpringCloudStreamBuilder withHost(String host) {
@@ -158,12 +164,23 @@ public class AsyncApiCodegen {
 	public static class Builder {
 		
 		protected File destDir = new File(System.getProperty("user.home") + "/Downloads");  // default
-		protected String filename = "asyncapi.zip";
+		protected String projectFolderName = "NewAsyncApiApp";
 		protected Template template = Template.SPRING_CLOUD_STREAM;
 		protected String asyncApiText;
 		protected final Map<String, String> parameters = new HashMap<>();
 
 		public Builder() {
+		}
+		
+		public Builder withDestDir(File dir) {
+			if (!dir.isDirectory()) throw new IllegalArgumentException(dir.getName() +  " must be a directory");
+			this.destDir = dir;
+			return this;
+		}
+		
+		public Builder withProjectFolder(String folderName) {
+			this.projectFolderName = folderName;
+			return this;
 		}
 		
 		public Builder withAsyncApi(String text) {
@@ -186,7 +203,6 @@ public class AsyncApiCodegen {
 				if (!destDir.mkdirs()) {
 					throw new IllegalArgumentException("Could not create destDir");
 				}
-				
 			}
 		}
 		
@@ -218,8 +234,8 @@ public class AsyncApiCodegen {
 	
 	
 	
-	/** Uses th OkHttp library used by Swagger */
-	public static void getCode2(Builder b) {
+	/** Uses the OkHttp library used by Swagger */
+	public static File getCode2(Builder b) throws Exception {
 		
 		RequestBody body = RequestBody.create(MediaType.parse("application/json"), b.getBody());
 		Request request = new Request.Builder()
@@ -232,28 +248,50 @@ public class AsyncApiCodegen {
 			Response response = call.execute();
 			System.out.println(response.code());
 			if (response.code() == 200) {
-	            FileOutputStream fos = new FileOutputStream(new File(b.destDir, b.filename));
-	            byte[] buffer = new byte[8 * 1024];
-                int bytesRead;
-                while ((bytesRead = response.body().byteStream().read(buffer)) != -1) {
-                	fos.write(buffer, 0, bytesRead);
-                }
-                fos.close();
+				
+				if ("save zip".equals("no thanks")) {
+					File zipFileOutput = new File(b.destDir, b.projectFolderName + ".zip");
+					FileOutputStream fos = new FileOutputStream(zipFileOutput);
+		            byte[] buffer = new byte[8 * 1024];
+	                int bytesRead;
+	                while ((bytesRead = response.body().byteStream().read(buffer)) != -1) {
+	                	fos.write(buffer, 0, bytesRead);
+	                }
+	                fos.close();
+	                return zipFileOutput;
+				} else {
+					File unzippedFolderName = new File(b.destDir, b.projectFolderName);
+					if (!unzippedFolderName.exists()) {
+						if (!unzippedFolderName.mkdirs()) {
+							throw new Exception("Couldn't save generate code!  Could not make directory " + unzippedFolderName.getName());
+						}
+					}
+					FileUtil.decompress(response.body().byteStream(), unzippedFolderName);
+					return unzippedFolderName;
+				}
 			} else {
+//				FileOutputStream fos = new FileOutputStream(new File(b.destDir, "error.txt"));
 				BufferedReader reader = new BufferedReader(response.body().charStream());
+				StringBuilder sb = new StringBuilder();
 				String line;
 				while ((line = reader.readLine()) != null) {
-					System.out.println(line);
+//					fos.write(line.getBytes());
+					sb.append(line);
+//					System.out.println(line);
 				}
+//                fos.close();
+				throw new Exception("Couldn't generate code!  " + response.code() + ", " + response.message() + ", " + sb.toString());
 			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			throw new Exception("Couldn't generate code! " + e.toString(),e);
 		}
 		
 	}
 
-	/** Vanilla Java */
+	/** Vanilla Java 
+	 * @throws Exception */
 /*	public static void getCode(Builder b) throws IOException {
         HttpURLConnection httpConnection = null;
         try {
@@ -325,7 +363,7 @@ public class AsyncApiCodegen {
 */	
 	
 
-	public static void main(String... args) throws IOException {
+	public static void main(String... args) throws Exception {
 		
 		
 		System.out.println(System.getProperty("user.home"));
@@ -350,7 +388,7 @@ public class AsyncApiCodegen {
 		
 		
 		
-		File f3 = new File("MessageVpnStatsReceiver-First Cut.json");
+		File f3 = new File("PersonArrivalNotifier-0.1.0.json");
 		System.out.println("File Exists? " + f3.exists());
 		System.out.println("Can read? " + f3.canRead());
 

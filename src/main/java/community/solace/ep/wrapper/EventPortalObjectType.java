@@ -1,8 +1,5 @@
 package community.solace.ep.wrapper;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import community.solace.ep.client.model.Application;
 import community.solace.ep.client.model.ApplicationDomain;
 import community.solace.ep.client.model.ApplicationVersion;
