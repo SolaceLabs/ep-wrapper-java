@@ -1,1 +1,4 @@
-{ "additionalModelTypeAnnotations": "@JsonIgnoreProperties(ignoreUnknown = true)" }
+{
+    "disallowAdditionalPropertiesIfNotPresent": false,
+    "discriminatorCaseSensitive": true
+}

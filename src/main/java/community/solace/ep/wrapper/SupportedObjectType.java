@@ -14,6 +14,7 @@ import community.solace.ep.client.model.EventMesh;
 import community.solace.ep.client.model.EventVersion;
 import community.solace.ep.client.model.SchemaObject;
 import community.solace.ep.client.model.SchemaVersion;
+import community.solace.ep.client.model.StateDTO;
 import community.solace.ep.client.model.TopicAddressEnum;
 import community.solace.ep.client.model.TopicAddressEnumVersion;
 import community.solace.ep.client.model.TopicDomain;
@@ -22,7 +23,7 @@ import community.solace.ep.client.model.TopicDomain;
  * Helper Enum to determine what type of Event Portal object you're dealing with.
  * Useful for switch statements for rendering views.
  */
-public enum EventPortalObjectType {
+public enum SupportedObjectType {
 
 	DOMAIN(ApplicationDomain.class),
 	APPLICATION(Application.class),
@@ -37,16 +38,18 @@ public enum EventPortalObjectType {
 	EVENT_API_VERSION(EventApiVersion.class),
 	EVENT_API_PRODUCT(EventApiProduct.class),
 	EVENT_API_PRODUCT_VERSION(EventApiProductVersion.class),
+	STATE(StateDTO.class),
 	CONSUMER(Consumer.class),
 	EVENT_MESH(EventMesh.class),
 	TOPIC_DOMAIN(TopicDomain.class),
 	ENVIRONMENT(Environment.class),
+	USER(null),  // Users aren't part of v2 schema yet
 	N_A(null),
 	;
 	
 	private final Class<?> clazz;
 	
-	private EventPortalObjectType(Class<?> clazz) {
+	private SupportedObjectType(Class<?> clazz) {
 		this.clazz = clazz;
 	}
 	
@@ -68,8 +71,8 @@ public enum EventPortalObjectType {
 	 * @param object ideally an Event Portal object
 	 * @return an enum describing the type of Event Portal object, or "N_A" if null or invalid
 	 */
-	public static EventPortalObjectType getType(Object object) {
-//		if (object == null) return N_A;
+	public static SupportedObjectType getType(Object object) {
+		if (object == null) return N_A;
 		Class<? extends Object> clazz = object.getClass();
 		if (clazz.equals(DOMAIN.clazz))						return DOMAIN;
 		else if (clazz.equals(APPLICATION.clazz))			return APPLICATION;
@@ -85,12 +88,15 @@ public enum EventPortalObjectType {
 		else if (clazz.equals(EVENT_API_PRODUCT.clazz)) return EVENT_API_PRODUCT;
 		else if (clazz.equals(EVENT_API_PRODUCT_VERSION.clazz)) return EVENT_API_PRODUCT_VERSION;
 		else if (clazz.equals(CONSUMER.clazz)) return CONSUMER;
-		
+		else if (clazz.equals(EVENT_MESH.clazz)) return EVENT_MESH;
+		else if (clazz.equals(TOPIC_DOMAIN.clazz)) return TOPIC_DOMAIN;
+		else if (clazz.equals(ENVIRONMENT.clazz)) return ENVIRONMENT;
 		return N_A;
 	}
 	
 	
-	
+
+	/** TEST CODE!  If uninitialized, then this could fail with "array index out of bounds" errors */
 	public Object getExample() {
 		switch (this) {
 		case DOMAIN: return EventPortalWrapper.INSTANCE.getDomains().toArray()[0];

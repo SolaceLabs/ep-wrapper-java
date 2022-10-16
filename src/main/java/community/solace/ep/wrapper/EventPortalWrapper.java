@@ -3,6 +3,7 @@ package community.solace.ep.wrapper;
 import java.io.BufferedReader;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -196,9 +197,15 @@ public enum EventPortalWrapper {
 	    long start = System.currentTimeMillis();
 //        loadException = null;  // blank it, used at end to make sure no loading errors
         loadErrorStrings = Collections.synchronizedSet(new HashSet<>());
-		AtomicInteger num = new AtomicInteger(1);  // one job, domains, for sure
-		pool.submit(() -> { loadDomains();		num.decrementAndGet(); });  // don't count first one
-		pool.submit(() -> { num.incrementAndGet();	loadApplications();	num.decrementAndGet(); });
+        if (!loadDomains()) {  // block on this one at least
+        	System.err.println("Could not even load any domains! " + loadErrorStrings.toString());
+        	loadStatus = LoadStatus.ERROR;
+        	return false;
+        }
+		AtomicInteger num = new AtomicInteger(1);  // start the counter at one job, just to make sure the while loop below doesn't miss it
+//		pool.submit(() -> { loadDomains();		num.decrementAndGet(); });  // don't count first one
+//		pool.submit(() -> { num.incrementAndGet();	loadApplications();	num.decrementAndGet(); });
+		pool.submit(() -> { loadApplications();	num.decrementAndGet(); });
 		pool.submit(() -> { num.incrementAndGet();	loadEvents();		num.decrementAndGet(); });
 		pool.submit(() -> { num.incrementAndGet();	loadSchemas();		num.decrementAndGet(); });
 		pool.submit(() -> { num.incrementAndGet();	loadEnums();		num.decrementAndGet(); });
@@ -226,6 +233,108 @@ public enum EventPortalWrapper {
 	        return true;
 		}
 	}
+
+    /**
+	 * Loads all objects in parallel using ExecutorService.  If loading is unsuccessful, query `getLoadException()`
+	 * to find out issue.
+     * @param pool an ExecutorService to use for loading objects
+	 * @return true if loading successful; false if any issue was encountered (although perhaps partial success)
+     */
+	public boolean loadAll(ExecutorService pool, EnumSet<SupportedObjectType> typesToLoad) {
+		if (loadStatus == LoadStatus.LOADING) {
+			return false;
+		}
+		loadStatus = LoadStatus.LOADING;
+	    long start = System.currentTimeMillis();
+//        loadException = null;  // blank it, used at end to make sure no loading errors
+        loadErrorStrings = Collections.synchronizedSet(new HashSet<>());
+        if (!loadDomains()) {  // block on this one at least
+        	System.err.println("Could not even load any domains! " + loadErrorStrings.toString());
+        	loadStatus = LoadStatus.ERROR;
+        	return false;
+        }
+		AtomicInteger num = new AtomicInteger(1);  // start the counter at one job, just to make sure the while loop below doesn't miss it
+//		pool.submit(() -> { loadDomains();		num.decrementAndGet(); });  // don't count first one
+//		pool.submit(() -> { num.incrementAndGet();	loadApplications();	num.decrementAndGet(); });
+		if (typesToLoad.contains(SupportedObjectType.APPLICATION) || typesToLoad.contains(SupportedObjectType.APPLICATION_VERSION))
+			pool.submit(() -> { loadApplications();	num.decrementAndGet(); });
+		if (typesToLoad.contains(SupportedObjectType.EVENT) || typesToLoad.contains(SupportedObjectType.EVENT_VERSION))
+			pool.submit(() -> { num.incrementAndGet();	loadEvents();		num.decrementAndGet(); });
+		if (typesToLoad.contains(SupportedObjectType.SCHEMA) || typesToLoad.contains(SupportedObjectType.SCHEMA_VERSION))
+			pool.submit(() -> { num.incrementAndGet();	loadSchemas();		num.decrementAndGet(); });
+		if (typesToLoad.contains(SupportedObjectType.ENUM) || typesToLoad.contains(SupportedObjectType.ENUM_VERSION))
+			pool.submit(() -> { num.incrementAndGet();	loadEnums();		num.decrementAndGet(); });
+		if (typesToLoad.contains(SupportedObjectType.EVENT_API) || typesToLoad.contains(SupportedObjectType.EVENT_API_VERSION))
+			pool.submit(() -> { num.incrementAndGet();	loadEventApis();	num.decrementAndGet(); });
+		if (typesToLoad.contains(SupportedObjectType.EVENT_API_PRODUCT) || typesToLoad.contains(SupportedObjectType.EVENT_API_PRODUCT_VERSION))
+			pool.submit(() -> { num.incrementAndGet();	loadEventApiProducts();	num.decrementAndGet(); });
+		if (typesToLoad.contains(SupportedObjectType.STATE))
+			pool.submit(() -> { num.incrementAndGet();	loadStates();		num.decrementAndGet(); });
+		if (typesToLoad.contains(SupportedObjectType.CONSUMER))
+			pool.submit(() -> { num.incrementAndGet();	loadConsumers();	num.decrementAndGet(); });
+		if (typesToLoad.contains(SupportedObjectType.EVENT_MESH))
+			pool.submit(() -> { num.incrementAndGet();	loadEventMeshes();	num.decrementAndGet(); });
+		if (typesToLoad.contains(SupportedObjectType.TOPIC_DOMAIN))
+			pool.submit(() -> { num.incrementAndGet();	loadTopicDomains();	num.decrementAndGet(); });
+		if (typesToLoad.contains(SupportedObjectType.ENVIRONMENT))
+			pool.submit(() -> { num.incrementAndGet();	loadEnvironments();	num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadUsersCustom();	num.decrementAndGet(); });
+
+		while (num.get() > 0) {
+			try {
+				Thread.sleep(20);
+			} catch (InterruptedException e) { }
+		}
+		if (!loadErrorStrings.isEmpty()) {
+	        System.err.println("EventPortalWrapper had issues loading: " + loadErrorStrings.toString());
+			loadStatus = LoadStatus.ERROR;
+			return false;
+		} else {
+	        System.out.println("EventPortalWrapper LOADED: " + (System.currentTimeMillis()-start) + "ms with PAGE_SIZE == " + PAGE_SIZE);
+	        loadStatus = LoadStatus.LOADED;
+	        lastRefresh = System.currentTimeMillis();
+	        return true;
+		}
+	}
+
+	
+	/**
+	 * Loads all objects serially in this thread.  If loading is unsuccessful, query `getLoadException()`
+	 * to find out issue.
+	 * @return true if loading successful; false if any issue was encountered (although perhaps partial success)
+	 */
+	public boolean load(EnumSet<SupportedObjectType> typesToLoad) {
+		if (loadStatus == LoadStatus.LOADING) {
+			return false;
+		}
+		loadStatus = LoadStatus.LOADING;
+	    long start = System.currentTimeMillis();
+        loadErrorStrings = Collections.synchronizedSet(new HashSet<>());
+        if (!loadDomains()) return false;
+        if (typesToLoad.contains(SupportedObjectType.APPLICATION) || typesToLoad.contains(SupportedObjectType.APPLICATION_VERSION)) loadApplications();
+        if (typesToLoad.contains(SupportedObjectType.EVENT) || typesToLoad.contains(SupportedObjectType.EVENT_VERSION)) loadEvents();
+        if (typesToLoad.contains(SupportedObjectType.SCHEMA) || typesToLoad.contains(SupportedObjectType.SCHEMA_VERSION)) loadSchemas();
+        if (typesToLoad.contains(SupportedObjectType.ENUM) || typesToLoad.contains(SupportedObjectType.ENUM_VERSION)) loadEnums();
+        if (typesToLoad.contains(SupportedObjectType.EVENT_API) || typesToLoad.contains(SupportedObjectType.EVENT_API_VERSION)) loadEventApis();
+        if (typesToLoad.contains(SupportedObjectType.EVENT_API_PRODUCT) || typesToLoad.contains(SupportedObjectType.EVENT_API_PRODUCT_VERSION)) loadEventApiProducts();
+        if (typesToLoad.contains(SupportedObjectType.STATE)) loadStates();
+        if (typesToLoad.contains(SupportedObjectType.CONSUMER)) loadConsumers();
+        if (typesToLoad.contains(SupportedObjectType.EVENT_MESH)) loadEventMeshes();
+        if (typesToLoad.contains(SupportedObjectType.TOPIC_DOMAIN)) loadTopicDomains();
+        if (typesToLoad.contains(SupportedObjectType.ENVIRONMENT)) loadEnvironments();
+        if (typesToLoad.contains(SupportedObjectType.USER)) loadUsersCustom();  // either way, keep going even if this breaks
+		if (!loadErrorStrings.isEmpty()) {
+	        System.err.println("EventPortalWrapper had issues loading: " + loadErrorStrings.toString());
+			loadStatus = LoadStatus.ERROR;
+			return false;
+		} else {
+	        System.out.println("EventPortalWrapper LOADED: " + (System.currentTimeMillis()-start) + "ms with PAGE_SIZE == " + PAGE_SIZE);
+	        loadStatus = LoadStatus.LOADED;
+	        lastRefresh = System.currentTimeMillis();
+	        return true;
+		}
+	}
+
 
 	/**
 	 * Loads all objects serially in this thread.  If loading is unsuccessful, query `getLoadException()`
@@ -329,7 +438,7 @@ public enum EventPortalWrapper {
 	        return true;
     	} catch (ApiException e) {
             loadStatus = LoadStatus.ERROR;
-            loadErrorStrings.add(e.getResponseBody());
+            loadErrorStrings.add("Couldn't load Domains: " + e.getResponseBody());
     		return false;
     	} catch (Throwable e) {
             loadStatus = LoadStatus.ERROR;
@@ -378,11 +487,11 @@ public enum EventPortalWrapper {
     		return true;
     	} catch (ApiException e) {
             loadStatus = LoadStatus.ERROR;
-            loadErrorStrings.add(e.getResponseBody());
+            loadErrorStrings.add("Couldn't load Apps: " + e.getResponseBody());
     		return false;
     	} catch (Throwable e) {
             loadStatus = LoadStatus.ERROR;
-            loadErrorStrings.add(e.toString());
+            loadErrorStrings.add("Couldn't load Apps: " + e.toString());
     		return false;
     	}
     }
@@ -427,11 +536,11 @@ public enum EventPortalWrapper {
     		return true;
     	} catch (ApiException e) {
             loadStatus = LoadStatus.ERROR;
-            loadErrorStrings.add(e.getResponseBody());
+            loadErrorStrings.add("Couldn't load Events: " + e.getResponseBody());
     		return false;
     	} catch (Throwable e) {
             loadStatus = LoadStatus.ERROR;
-            loadErrorStrings.add(e.toString());
+            loadErrorStrings.add("Couldn't load Events: " + e.toString());
     		return false;
     	}
     }
@@ -478,11 +587,11 @@ public enum EventPortalWrapper {
     		return true;
     	} catch (ApiException e) {
             loadStatus = LoadStatus.ERROR;
-            loadErrorStrings.add(e.getResponseBody());
+            loadErrorStrings.add("Couldn't load Schemas: " + e.getResponseBody());
     		return false;
     	} catch (Throwable e) {
             loadStatus = LoadStatus.ERROR;
-            loadErrorStrings.add(e.toString());
+            loadErrorStrings.add("Couldn't load Schemas: " + e.toString());
     		return false;
     	}
     }
@@ -527,11 +636,11 @@ public enum EventPortalWrapper {
     		return true;
     	} catch (ApiException e) {
             loadStatus = LoadStatus.ERROR;
-            loadErrorStrings.add(e.getResponseBody());
+            loadErrorStrings.add("Couldn't load Enums: " + e.getResponseBody());
     		return false;
     	} catch (Throwable e) {
             loadStatus = LoadStatus.ERROR;
-            loadErrorStrings.add(e.toString());
+            loadErrorStrings.add("Couldn't load Enums: " + e.toString());
     		return false;
     	}
     }
@@ -576,11 +685,11 @@ public enum EventPortalWrapper {
     		return true;
     	} catch (ApiException e) {
             loadStatus = LoadStatus.ERROR;
-            loadErrorStrings.add(e.getResponseBody());
+            loadErrorStrings.add("Couldn't load Event APIs: " + e.getResponseBody());
     		return false;
     	} catch (Throwable e) {
             loadStatus = LoadStatus.ERROR;
-            loadErrorStrings.add(e.toString());
+            loadErrorStrings.add("Couldn't load Event APIs: " + e.toString());
     		return false;
     	}
     }
@@ -627,11 +736,11 @@ public enum EventPortalWrapper {
     		return true;
     	} catch (ApiException e) {
             loadStatus = LoadStatus.ERROR;
-            loadErrorStrings.add(e.getResponseBody());
+            loadErrorStrings.add("Couldn't load Event API Products: " + e.getResponseBody());
     		return false;
     	} catch (Throwable e) {
             loadStatus = LoadStatus.ERROR;
-            loadErrorStrings.add(e.toString());
+            loadErrorStrings.add("Couldn't load Event API Products: " + e.toString());
     		return false;
     	}
     }
@@ -1205,18 +1314,18 @@ public enum EventPortalWrapper {
 	 * @param id the EventPortal ID of any type of object
 	 * @return
 	 */
-	public EventPortalObjectType getEventPortalObjectType(String id) {
+	public SupportedObjectType getEventPortalObjectType(String id) {
 		if (loadStatus != LoadStatus.LOADED) return null;
-		if (domains.containsKey(id)) return EventPortalObjectType.DOMAIN;
-		if (applicationsById.containsKey(id)) return EventPortalObjectType.APPLICATION;
-		if (applicationVersionsById.containsKey(id)) return EventPortalObjectType.APPLICATION_VERSION;
-		if (eventsById.containsKey(id)) return EventPortalObjectType.EVENT;
-		if (eventApiVersionsById.containsKey(id)) return EventPortalObjectType.EVENT_VERSION;
-		if (schemasById.containsKey(id)) return EventPortalObjectType.SCHEMA;
-		if (schemaVersionsById.containsKey(id)) return EventPortalObjectType.SCHEMA_VERSION;
-		if (eventApisById.containsKey(id)) return EventPortalObjectType.EVENT_API;
-		if (eventVersionsById.containsKey(id)) return EventPortalObjectType.EVENT_API_VERSION;
-		return EventPortalObjectType.N_A;
+		if (domains.containsKey(id)) return SupportedObjectType.DOMAIN;
+		if (applicationsById.containsKey(id)) return SupportedObjectType.APPLICATION;
+		if (applicationVersionsById.containsKey(id)) return SupportedObjectType.APPLICATION_VERSION;
+		if (eventsById.containsKey(id)) return SupportedObjectType.EVENT;
+		if (eventApiVersionsById.containsKey(id)) return SupportedObjectType.EVENT_VERSION;
+		if (schemasById.containsKey(id)) return SupportedObjectType.SCHEMA;
+		if (schemaVersionsById.containsKey(id)) return SupportedObjectType.SCHEMA_VERSION;
+		if (eventApisById.containsKey(id)) return SupportedObjectType.EVENT_API;
+		if (eventVersionsById.containsKey(id)) return SupportedObjectType.EVENT_API_VERSION;
+		return SupportedObjectType.N_A;
 	}
 
 	
