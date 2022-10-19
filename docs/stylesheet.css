@@ -2,81 +2,70 @@
 /*
 Overall document style
 */
-
-@import url('resources/fonts/dejavu.css');
-
 body {
     background-color:#ffffff;
     color:#353833;
-    font-family:'DejaVu Sans', Arial, Helvetica, sans-serif;
-    font-size:14px;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size:76%;
     margin:0;
 }
 a:link, a:visited {
     text-decoration:none;
-    color:#4A6782;
+    /** DOC-123 color:#4c6b87; */
+    color:#00AD93;
 }
 a:hover, a:focus {
     text-decoration:none;
-    color:#bb7a2a;
+    color:#F37021;
 }
 a:active {
     text-decoration:none;
-    color:#4A6782;
+    color:#4c6b87;
 }
 a[name] {
     color:#353833;
 }
 a[name]:hover {
     text-decoration:none;
-    color:#353833;
+    color:#F37021;
 }
 pre {
-    font-family:'DejaVu Sans Mono', monospace;
-    font-size:14px;
+    font-size:1.3em;
 }
 h1 {
-    font-size:20px;
+    font-size:1.8em;
 }
 h2 {
-    font-size:18px;
+    font-size:1.5em;
 }
+
 h3 {
-    font-size:16px;
-    font-style:italic;
+    font-size:1.4em;
 }
 h4 {
-    font-size:13px;
+    font-size:1.3em;
 }
 h5 {
-    font-size:12px;
+    font-size:1.2em;
 }
 h6 {
-    font-size:11px;
+    font-size:1.1em;
 }
 ul {
     list-style-type:disc;
 }
 code, tt {
-    font-family:'DejaVu Sans Mono', monospace;
-    font-size:14px;
-    padding-top:4px;
-    margin-top:8px;
-    line-height:1.4em;
+    font-size:1.2em;
 }
 dt code {
-    font-family:'DejaVu Sans Mono', monospace;
-    font-size:14px;
-    padding-top:4px;
+    font-size:1.2em;
 }
 table tr td dt code {
-    font-family:'DejaVu Sans Mono', monospace;
-    font-size:14px;
+    font-size:1.2em;
     vertical-align:top;
-    padding-top:4px;
 }
 sup {
-    font-size:8px;
+    font-size:.6em;
 }
 /*
 Document title and Copyright styles
@@ -89,22 +78,23 @@ Document title and Copyright styles
 .aboutLanguage {
     float:right;
     padding:0px 21px;
-    font-size:11px;
+    font-size:.8em;
     z-index:200;
-    margin-top:-9px;
+    margin-top:-7px;
 }
 .legalCopy {
     margin-left:.5em;
 }
 .bar a, .bar a:link, .bar a:visited, .bar a:active {
-    color:#FFFFFF;
+    color:#000000;
     text-decoration:none;
 }
 .bar a:hover, .bar a:focus {
-    color:#bb7a2a;
+    color:#F37021;
 }
 .tab {
     background-color:#0066FF;
+    background-position:left top;
     color:#ffffff;
     padding:8px;
     width:5em;
@@ -114,29 +104,37 @@ Document title and Copyright styles
 Navigation bar styles
 */
 .bar {
-    background-color:#4D7A97;
-    color:#FFFFFF;
+	
+	background-color: #FFFFFF;
     padding:.8em .5em .4em .8em;
     height:auto;/*height:1.8em;*/
-    font-size:11px;
+    font-size:1.2em;
     margin:0;
 }
 .topNav {
-    background-color:#4D7A97;
-    color:#FFFFFF;
+    background-origin: content-box;
+	background: #474747 url(resources/Solace_Logo_Green.png) no-repeat top left;
+	
+	
+	background-color:#FFFFFF;
+	background-position:0.5% 10%;
+	color:#000000;
+	
+	
     float:left;
-    padding:0;
+   
     width:100%;
     clear:right;
-    height:2.8em;
-    padding-top:10px;
+    height:3.0em;
+    padding-top:70px;
+	padding-left:0px;
+	padding-bottom:20px;
     overflow:hidden;
-    font-size:12px; 
 }
 .bottomNav {
     margin-top:10px;
-    background-color:#4D7A97;
-    color:#FFFFFF;
+	background-color:#FFFFFF;
+    color: #000000;
     float:left;
     padding:0;
     width:100%;
@@ -144,20 +142,19 @@ Navigation bar styles
     height:2.8em;
     padding-top:10px;
     overflow:hidden;
-    font-size:12px;
 }
 .subNav {
-    background-color:#dee3e9;
+    background-color:#474747;
+    color: #FFFFFF;
+    border-bottom:1px solid #9eadc0;
     float:left;
     width:100%;
     overflow:hidden;
-    font-size:12px;
 }
 .subNav div {
     clear:left;
     float:left;
     padding:0 0 5px 6px;
-    text-transform:uppercase;
 }
 ul.navList, ul.subNavList {
     float:left;
@@ -167,33 +164,27 @@ ul.navList, ul.subNavList {
 ul.navList li{
     list-style:none;
     float:left;
-    padding: 5px 6px;
-    text-transform:uppercase;
+    padding:3px 6px;
 }
 ul.subNavList li{
     list-style:none;
     float:left;
+    font-size:90%;
 }
 .topNav a:link, .topNav a:active, .topNav a:visited, .bottomNav a:link, .bottomNav a:active, .bottomNav a:visited {
-    color:#FFFFFF;
+    color:#00AD93;
     text-decoration:none;
-    text-transform:uppercase;
 }
 .topNav a:hover, .bottomNav a:hover {
-    text-decoration:none;
-    color:#bb7a2a;
-    text-transform:uppercase;
+    text-decoration: none;
+    color:#F37021;
 }
 .navBarCell1Rev {
-    background-color:#F8981D;
-    color:#253441;
+    background-image:url(resources/tab.gif);
+    background-color: #009193;
+    color:#FFFFFF;
     margin: auto 5px;
-}
-.skipNav {
-    position:absolute;
-    top:auto;
-    left:-9999px;
-    overflow:hidden;
+    border:1px solid #009193;
 }
 /*
 Page header and footer styles
@@ -207,21 +198,19 @@ Page header and footer styles
     margin:10px;
     position:relative;
 }
-.indexHeader span{
-    margin-right:15px;
-}
-.indexHeader h1 {
-    font-size:13px;
-}
+
+
 .title {
-    color:#2c4557;
+    color: #00AD93;
     margin:10px 0;
 }
 .subTitle {
-    margin:5px 0 0 0;
+    margin: 5px 0 0 0;
+    font-weight: 500;
+    font-size: 1.6em
 }
 .header ul {
-    margin:0 0 15px 0;
+    margin:0 0 25px 0;
     padding:0;
 }
 .footer ul {
@@ -229,22 +218,24 @@ Page header and footer styles
 }
 .header ul li, .footer ul li {
     list-style:none;
-    font-size:13px;
+    font-size:1.2em;
 }
 /*
 Heading styles
 */
 div.details ul.blockList ul.blockList ul.blockList li.blockList h4, div.details ul.blockList ul.blockList ul.blockListLast li.blockList h4 {
-    background-color:#dee3e9;
-    border:1px solid #d0d9e0;
+    color:#FFFFFF;
+    background:#474747;
+    border:1px solid #d9d9d9;
     margin:0 0 6px -8px;
-    padding:7px 5px;
+    padding:2px 5px;
 }
 ul.blockList ul.blockList ul.blockList li.blockList h3 {
-    background-color:#dee3e9;
-    border:1px solid #d0d9e0;
+    color:#FFFFFF;
+    background:#474747;
+    border:1px solid #d9d9d9;
     margin:0 0 6px -8px;
-    padding:7px 5px;
+    padding:2px 5px;
 }
 ul.blockList ul.blockList li.blockList h3 {
     padding:0;
@@ -264,10 +255,10 @@ Page layout container styles
 .indexContainer {
     margin:10px;
     position:relative;
-    font-size:12px;
+    font-size:1.0em;
 }
 .indexContainer h2 {
-    font-size:13px;
+    font-size:1.1em;
     padding:0 0 3px 0;
 }
 .indexContainer ul {
@@ -276,18 +267,17 @@ Page layout container styles
 }
 .indexContainer ul li {
     list-style:none;
-    padding-top:2px;
 }
 .contentContainer .description dl dt, .contentContainer .details dl dt, .serializedFormContainer dl dt {
-    font-size:12px;
+    font-size:1.1em;
     font-weight:bold;
     margin:10px 0 0 0;
-    color:#4E4E4E;
+    /*color:#00AD93;*/
+	color: #000000;
+    
 }
 .contentContainer .description dl dd, .contentContainer .details dl dd, .serializedFormContainer dl dd {
-    margin:5px 0 10px 0px;
-    font-size:14px;
-    font-family:'DejaVu Sans Mono',monospace;
+    margin:10px 0 10px 20px;
 }
 .serializedFormContainer dl.nameValue dt {
     margin-left:1px;
@@ -310,15 +300,27 @@ ul.horizontal li {
 ul.inheritance {
     margin:0;
     padding:0;
+    font-family: monospace;
+    font-size:1.1em;
+    list-style-type: disc;
 }
 ul.inheritance li {
     display:inline;
     list-style:none;
+    font-family:monospace;
+    font-size:1.1em;
+    list-style-type: disc;
 }
 ul.inheritance li ul.inheritance {
     margin-left:15px;
     padding-left:15px;
     padding-top:1px;
+    font-family:monospace;
+    font-size:1.0em;
+    list-style-type: disc;
+}
+ul#inheritance {
+     list-style-type: disc;
 }
 ul.blockList, ul.blockListLast {
     margin:10px 0 10px 0;
@@ -326,24 +328,25 @@ ul.blockList, ul.blockListLast {
 }
 ul.blockList li.blockList, ul.blockListLast li.blockList {
     list-style:none;
-    margin-bottom:15px;
-    line-height:1.4;
+    margin-bottom:10px;
 }
 ul.blockList ul.blockList li.blockList, ul.blockList ul.blockListLast li.blockList {
     padding:0px 20px 5px 10px;
-    border:1px solid #ededed; 
-    background-color:#f8f8f8;
+    border:1px solid #9eadc0;
+    background-color:#f9f9f9;
 }
 ul.blockList ul.blockList ul.blockList li.blockList, ul.blockList ul.blockList ul.blockListLast li.blockList {
     padding:0 0 5px 8px;
     background-color:#ffffff;
-    border:none;
+    border:1px solid #9eadc0;
+    border-top:none;
 }
 ul.blockList ul.blockList ul.blockList ul.blockList li.blockList {
     margin-left:0;
     padding-left:0;
     padding-bottom:15px;
     border:none;
+    border-bottom:1px solid #9eadc0;
 }
 ul.blockList ul.blockList ul.blockList ul.blockList li.blockListLast {
     list-style:none;
@@ -357,155 +360,137 @@ table tr td dl, table tr td dl dt, table tr td dl dd {
 /*
 Table styles
 */
-.overviewSummary, .memberSummary, .typeSummary, .useSummary, .constantsSummary, .deprecatedSummary {
+.contentContainer table, .classUseContainer table, .constantValuesContainer table {
+    border: 1px solid #9eadc0;
     width:100%;
-    border-left:1px solid #EEE; 
-    border-right:1px solid #EEE; 
-    border-bottom:1px solid #EEE; 
 }
-.overviewSummary, .memberSummary  {
-    padding:0px;
+.contentContainer ul li table, .classUseContainer ul li table, .constantValuesContainer ul li table {
+    width:100%;
 }
-.overviewSummary caption, .memberSummary caption, .typeSummary caption,
-.useSummary caption, .constantsSummary caption, .deprecatedSummary caption {
+.contentContainer .description table, .contentContainer .details table {
+    border-bottom:none;
+}
+.contentContainer ul li table th.colOne, .contentContainer ul li table th.colFirst, .contentContainer ul li table th.colLast, .classUseContainer ul li table th, .constantValuesContainer ul li table th, .contentContainer ul li table td.colOne, .contentContainer ul li table td.colFirst, .contentContainer ul li table td.colLast, .classUseContainer ul li table td, .constantValuesContainer ul li table td{
+    vertical-align:top;
+    padding-right:20px;
+}
+.contentContainer ul li table th.colLast, .classUseContainer ul li table th.colLast,.constantValuesContainer ul li table th.colLast,
+.contentContainer ul li table td.colLast, .classUseContainer ul li table td.colLast,.constantValuesContainer ul li table td.colLast,
+.contentContainer ul li table th.colOne, .classUseContainer ul li table th.colOne,
+.contentContainer ul li table td.colOne, .classUseContainer ul li table td.colOne {
+    padding-right:3px;
+}
+.overviewSummary caption, .packageSummary caption, .contentContainer ul.blockList li.blockList caption, .summary caption, .classUseContainer caption, .constantValuesContainer caption {
     position:relative;
     text-align:left;
     background-repeat:no-repeat;
-    color:#253441;
+    color:#FFFFFF;
     font-weight:bold;
     clear:none;
     overflow:hidden;
     padding:0px;
-    padding-top:10px;
-    padding-left:1px;
     margin:0px;
-    white-space:pre;
 }
-.overviewSummary caption a:link, .memberSummary caption a:link, .typeSummary caption a:link,
-.useSummary caption a:link, .constantsSummary caption a:link, .deprecatedSummary caption a:link,
-.overviewSummary caption a:hover, .memberSummary caption a:hover, .typeSummary caption a:hover,
-.useSummary caption a:hover, .constantsSummary caption a:hover, .deprecatedSummary caption a:hover,
-.overviewSummary caption a:active, .memberSummary caption a:active, .typeSummary caption a:active,
-.useSummary caption a:active, .constantsSummary caption a:active, .deprecatedSummary caption a:active,
-.overviewSummary caption a:visited, .memberSummary caption a:visited, .typeSummary caption a:visited,
-.useSummary caption a:visited, .constantsSummary caption a:visited, .deprecatedSummary caption a:visited {
+
+.summary caption
+{
+     visibility: hidden;
+     height: 0px;
+}
+.constantValuesContainer caption {
+	background-color: #474747;
+	color: #00C895;
+}
+
+.constantValues table caption span
+{
+  color: #FFFFFF;
+}
+
+caption a:link, caption a:hover, caption a:active, caption a:visited {
+    /*DOC-123*/
     color:#FFFFFF;
 }
-.overviewSummary caption span, .memberSummary caption span, .typeSummary caption span,
-.useSummary caption span, .constantsSummary caption span, .deprecatedSummary caption span {
-    white-space:nowrap;
-    padding-top:5px;
-    padding-left:12px;
-    padding-right:12px;
-    padding-bottom:7px;
-    display:inline-block;
-    float:left;
-    background-color:#F8981D;
-    border: none;
-    height:16px;
-}
-.memberSummary caption span.activeTableTab span {
-    white-space:nowrap;
-    padding-top:5px;
-    padding-left:12px;
-    padding-right:12px;
-    margin-right:3px;
-    display:inline-block;
-    float:left;
-    background-color:#F8981D;
-    height:16px;
-}
-.memberSummary caption span.tableTab span {
-    white-space:nowrap;
-    padding-top:5px;
-    padding-left:12px;
-    padding-right:12px;
-    margin-right:3px;
-    display:inline-block;
-    float:left;
-    background-color:#4D7A97;
-    height:16px;
-}
-.memberSummary caption span.tableTab, .memberSummary caption span.activeTableTab {
-    padding-top:0px;
-    padding-left:0px;
-    padding-right:0px;
-    background-image:none;
-    float:none;
-    display:inline;
-}
-.overviewSummary .tabEnd, .memberSummary .tabEnd, .typeSummary .tabEnd,
-.useSummary .tabEnd, .constantsSummary .tabEnd, .deprecatedSummary .tabEnd {
-    display:none;
-    width:5px;
-    position:relative;
-    float:left;
-    background-color:#F8981D;
-}
-.memberSummary .activeTableTab .tabEnd {
-    display:none;
-    width:5px;
-    margin-right:3px;
-    position:relative; 
-    float:left;
-    background-color:#F8981D;
-}
-.memberSummary .tableTab .tabEnd {
-    display:none;
-    width:5px;
-    margin-right:3px;
-    position:relative;
-    background-color:#4D7A97;
-    float:left;
 
+caption a:hover
+{
+    color:#F37021
 }
-.overviewSummary td, .memberSummary td, .typeSummary td,
-.useSummary td, .constantsSummary td, .deprecatedSummary td {
-    text-align:left;
-    padding:0px 0px 12px 10px;
+.constantValuesContainer caption a:link {
+	color: #FFFFFF;
 }
-th.colOne, th.colFirst, th.colLast, .useSummary th, .constantsSummary th,
-td.colOne, td.colFirst, td.colLast, .useSummary td, .constantsSummary td{
-    vertical-align:top;
-    padding-right:0px;
-    padding-top:8px;
-    padding-bottom:3px;
+
+.constantValuesContainer caption a:hover {
+	color: #F37021;
 }
-th.colFirst, th.colLast, th.colOne, .constantsSummary th {
-    background:#dee3e9;
-    text-align:left;
-    padding:8px 3px 3px 7px;
-}
-td.colFirst, th.colFirst {
+.overviewSummary caption span, .packageSummary caption span, .contentContainer ul.blockList li.blockList caption span, .summary caption span, .classUseContainer caption span, .constantValuesContainer caption span {
     white-space:nowrap;
-    font-size:13px;
+    padding-top:8px;
+    padding-left:8px;
+    display:block;
+    float:left;
+    background-image:url(resources/titlebar.gif);
+    height:18px;
 }
-td.colLast, th.colLast {
-    font-size:13px;
+.overviewSummary .tabEnd, .packageSummary .tabEnd, .contentContainer ul.blockList li.blockList .tabEnd, .summary .tabEnd, .classUseContainer .tabEnd, .constantValuesContainer .tabEnd {
+    width:10px;
+    background-image:url(resources/titlebar_end.gif);
+    background-repeat:no-repeat;
+    background-position:top right;
+    position:relative;
+    float:left;
 }
-td.colOne, th.colOne {
-    font-size:13px;
+ul.blockList ul.blockList li.blockList table {
+    margin:0 0 12px 0px;
+    width:100%;
 }
-.overviewSummary td.colFirst, .overviewSummary th.colFirst,
-.useSummary td.colFirst, .useSummary th.colFirst,
-.overviewSummary td.colOne, .overviewSummary th.colOne,
-.memberSummary td.colFirst, .memberSummary th.colFirst,
-.memberSummary td.colOne, .memberSummary th.colOne,
-.typeSummary td.colFirst{
-    width:25%;
-    vertical-align:top;
+.tableSubHeadingColor {
+    background-color: #EEEEFF;
+}
+.altColor {
+    background-color:#eeeeef;
+}
+.rowColor {
+    background-color:#ffffff;
+}
+.overviewSummary td, .packageSummary td, .contentContainer ul.blockList li.blockList td, .summary td, .classUseContainer td, .constantValuesContainer td {
+    text-align:left;
+    padding:3px 3px 3px 7px;
+    border:1px solid #d9d9d9;
+}
+th.colFirst, th.colLast, th.colOne, .constantValuesContainer th {
+    color:#FFFFFF;
+    background:#474747;
+    border:1px solid #d9d9d9;
+    border-bottom:1px solid #d9d9d9;
+    text-align:left;
+    padding:3px 3px 3px 7px;
 }
 td.colOne a:link, td.colOne a:active, td.colOne a:visited, td.colOne a:hover, td.colFirst a:link, td.colFirst a:active, td.colFirst a:visited, td.colFirst a:hover, td.colLast a:link, td.colLast a:active, td.colLast a:visited, td.colLast a:hover, .constantValuesContainer td a:link, .constantValuesContainer td a:active, .constantValuesContainer td a:visited, .constantValuesContainer td a:hover {
     font-weight:bold;
 }
-.tableSubHeadingColor {
-    background-color:#EEEEFF;
+td.colFirst, th.colFirst {
+    border: 1px solid #d9d9d9;
+    white-space:nowrap;
 }
-.altColor {
-    background-color:#FFFFFF;
+td.colLast, th.colLast {
+    border: 1px solid #d9d9d9;
 }
-.rowColor {
-    background-color:#EEEEEF;
+td.colOne, th.colOne {
+     border: 1px solid #d9d9d9;
+}
+table.overviewSummary  {
+    padding:0px;
+    margin-left:0px;
+}
+table.overviewSummary td.colFirst, table.overviewSummary th.colFirst,
+table.overviewSummary td.colOne, table.overviewSummary th.colOne {
+    width:25%;
+    vertical-align:middle;
+}
+table.packageSummary td.colFirst, table.overviewSummary th.colFirst {
+    width:25%;
+    vertical-align:middle;
 }
 /*
 Content styles
@@ -520,24 +505,6 @@ Content styles
 .docSummary {
     padding:0;
 }
-
-ul.blockList ul.blockList ul.blockList li.blockList h3 {
-    font-style:normal;
-}
-
-div.block {
-    font-size:14px;
-    font-family:'DejaVu Serif', Georgia, "Times New Roman", Times, serif;
-}
-
-td.colLast div {
-    padding-top:0px;
-}
-
-
-td.colLast a {
-    padding-bottom:3px;
-}
 /*
 Formatting effect styles
 */
@@ -548,27 +515,27 @@ Formatting effect styles
 h1.hidden {
     visibility:hidden;
     overflow:hidden;
-    font-size:10px;
+    font-size:.9em;
 }
 .block {
     display:block;
-    margin:3px 10px 2px 0px;
-    color:#474747;
+    margin:3px 0 0 0;
 }
-.deprecatedLabel, .descfrmTypeLabel, .memberNameLabel, .memberNameLink,
-.overrideSpecifyLabel, .packageHierarchyLabel, .paramLabel, .returnLabel,
-.seeLabel, .simpleTagLabel, .throwsLabel, .typeNameLabel, .typeNameLink {
+.strong {
     font-weight:bold;
 }
-.deprecationComment, .emphasizedPhrase, .interfaceName {
-    font-style:italic;
+
+div .skipNav
+{
+    border-top: 1px solid #000000;
+    visibility: hidden;
 }
 
-div.block div.block span.deprecationComment, div.block div.block span.emphasizedPhrase,
-div.block div.block span.interfaceName {
-    font-style:normal;
+.indexHeader span a {
+    height: 0px;
+    visibility: hidden;
 }
 
-div.contentContainer ul.blockList li.blockList h2{
-    padding-bottom:0px;
-}
+
+
+
