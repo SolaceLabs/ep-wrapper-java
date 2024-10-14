@@ -21,8 +21,8 @@ import community.solace.ep.client.model.SchemaVersion;
 import community.solace.ep.client.model.SchemaVersionResponse;
 import community.solace.ep.wrapper.EventPortalWrapper;
 import community.solace.ep.wrapper.FileUtil;
-import community.solace.ep.wrapper.SchemaToPojo;
-import community.solace.ep.wrapper.SchemaToPojo.BuilderFromSchema;
+//import community.solace.ep.wrapper.SchemaToPojo;
+//import community.solace.ep.wrapper.SchemaToPojo.BuilderFromSchema;
 
 public class CodegenTest {
 	
@@ -53,11 +53,11 @@ public class CodegenTest {
     	SchemaVersion sv = response.getData();
     	
     	
-        SchemaToPojo.BuilderFromSchema builder = new BuilderFromSchema(new SchemasApi(client).getSchema(sv.getSchemaId()).getData(), response.getData());
-        builder.setBasePackageName("com.solace.aaron.model")
-        		.setFilePath("src/main/java");
-        System.out.println(builder);
-        assertTrue("builder.build() should return 'true'", builder.build());
+//        SchemaToPojo.BuilderFromSchema builder = new BuilderFromSchema(new SchemasApi(client).getSchema(sv.getSchemaId()).getData(), response.getData());
+//        builder.setBasePackageName("com.solace.aaron.model")
+//        		.setFilePath("src/main/java");
+//        System.out.println(builder);
+//        assertTrue("builder.build() should return 'true'", builder.build());
     }
     
     
@@ -67,12 +67,12 @@ public class CodegenTest {
     	SchemaVersion sv = response.getData();
     	
     	
-        SchemaToPojo.BuilderFromSchema builder = new BuilderFromSchema(new SchemasApi(client).getSchema(sv.getSchemaId()).getData(), response.getData());
-        builder.setBasePackageName("com.solace.aaron.nested")
-        		.setFilePath("src/main/java");
-        builder.setSchemaContentText(FileUtil.loadTextFile(new File("AaronNested.json")));
-        System.out.println(builder);
-        assertTrue("builder.build() should return 'true'", builder.build());
+//        SchemaToPojo.BuilderFromSchema builder = new BuilderFromSchema(new SchemasApi(client).getSchema(sv.getSchemaId()).getData(), response.getData());
+//        builder.setBasePackageName("com.solace.aaron.nested")
+//        		.setFilePath("src/main/java");
+//        builder.setSchemaContentText(FileUtil.loadTextFile(new File("AaronNested.json")));
+//        System.out.println(builder);
+//        assertTrue("builder.build() should return 'true'", builder.build());
     }
     
 

@@ -26,7 +26,7 @@ public class FileUtil {
 		return sb.toString();
 	}
 
-
+/*
 	public static void decompress(InputStream input, File destDir) throws IOException {
 		
 		ZipInputStream zin = new ZipInputStream(input);
@@ -54,7 +54,9 @@ public class FileUtil {
 			out.close();
 		}
 	}
-
+*/
+	
+	
 	public static void decompress(final File inputFile, final File destDir) throws IOException {
 		ZipFile zipFile = new ZipFile(inputFile);
 
@@ -81,7 +83,7 @@ public class FileUtil {
 
 			} catch (IOException e) {
 				zipFile.close();
-				IOException ioe = new IOException("Not valid COAMPS archive file type.");
+				IOException ioe = new IOException("Not valid archive file type.");
 				ioe.initCause(e);
 				throw ioe;
 			} finally {
