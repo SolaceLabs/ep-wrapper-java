@@ -31,7 +31,7 @@ public class AysyncApiFetchTest {
 
     @Test public void testSomeLibraryMethod() {
     	
-    	System.out.println(EPW.getAsyncApiForAppVerId("u39ey35iel6", true));
+//    	System.out.println(EPW.getAsyncApiForAppVerId("u39ey35iel6", true));
     	
     	
     	

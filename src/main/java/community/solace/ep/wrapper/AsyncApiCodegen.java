@@ -15,15 +15,16 @@ import java.util.Set;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.squareup.okhttp.Call;
-import com.squareup.okhttp.MediaType;
-import com.squareup.okhttp.OkHttpClient;
-import com.squareup.okhttp.Request;
-import com.squareup.okhttp.RequestBody;
-import com.squareup.okhttp.Response;
 
 import community.solace.ep.client.model.ApplicationVersion;
 import community.solace.ep.client.model.EventVersion;
+import dev.solace.aaron.useful.FileUtils;
+import okhttp3.Call;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class AsyncApiCodegen {
 	
@@ -118,12 +119,6 @@ public class AsyncApiCodegen {
 				}
 			}
 			System.out.println(functions);
-			
-//			Map<?, ?>
-			
-			
-			
-			
 			return functions;
 		}
 		
@@ -140,8 +135,6 @@ public class AsyncApiCodegen {
 			this.withAsyncApi(new Gson().toJson(o));
 			return this;
 		}
-		
-		
 	}
 	
 	
@@ -237,7 +230,16 @@ public class AsyncApiCodegen {
 	/** Uses the OkHttp library used by Swagger */
 	public static File getCode2(Builder b) throws Exception {
 		
-		RequestBody body = RequestBody.create(MediaType.parse("application/json"), b.getBody());
+		
+//		RequestBody.cre
+		
+//		RequestBody body = RequestBody.create(b.getBody().getBytes());  // Will thiw work?
+//		byte[] bodyBytes = b.getBody().getBytes();
+//		RequestBody.
+//		RequestBody.create(bodyBytes, MediaType.parse("application/json"), 0, bodyBytes.length);
+		RequestBody body = RequestBody.create(b.getBody(), MediaType.parse("application/json"));
+		
+//		RequestBody body = RequestBody.create(MediaType.parse("application/json"), b.getBody());
 		Request request = new Request.Builder()
 				.url(REST_CALL)
 				.post(body)
@@ -259,14 +261,14 @@ public class AsyncApiCodegen {
 	                }
 	                fos.close();
 	                return zipFileOutput;
-				} else {
+				} else {  // gonna unzip it to some folder
 					File unzippedFolderName = new File(b.destDir, b.projectFolderName);
 					if (!unzippedFolderName.exists()) {
 						if (!unzippedFolderName.mkdirs()) {
 							throw new Exception("Couldn't save generate code!  Could not make directory " + unzippedFolderName.getName());
 						}
 					}
-					FileUtil.decompress(response.body().byteStream(), unzippedFolderName);
+					FileUtils.decompressZipStreamToDir(response.body().byteStream(), unzippedFolderName);
 					return unzippedFolderName;
 				}
 			} else {

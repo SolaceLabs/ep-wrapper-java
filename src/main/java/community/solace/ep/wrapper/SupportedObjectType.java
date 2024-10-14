@@ -1,9 +1,12 @@
 package community.solace.ep.wrapper;
 
+import community.solace.ep.client.Configuration;
 import community.solace.ep.client.model.Application;
 import community.solace.ep.client.model.ApplicationDomain;
 import community.solace.ep.client.model.ApplicationVersion;
+import community.solace.ep.client.model.ConfigurationType;
 import community.solace.ep.client.model.Consumer;
+import community.solace.ep.client.model.CustomAttribute;
 import community.solace.ep.client.model.Environment;
 import community.solace.ep.client.model.Event;
 import community.solace.ep.client.model.EventApi;
@@ -44,6 +47,11 @@ public enum SupportedObjectType {
 	TOPIC_DOMAIN(TopicDomain.class),
 	ENVIRONMENT(Environment.class),
 	USER(null),  // Users aren't part of v2 schema yet
+	// new:
+	CONFIGURATION(Configuration.class),
+	CONFIGURATION_TYPE(ConfigurationType.class),
+	CUSTOM_ATTRIBUTE(CustomAttribute.class),
+	
 	N_A(null),
 	;
 	
@@ -82,16 +90,78 @@ public enum SupportedObjectType {
 		else if (clazz.equals(SCHEMA.clazz))				return SCHEMA;
 		else if (clazz.equals(SCHEMA_VERSION.clazz))		return SCHEMA_VERSION;
 		else if (clazz.equals(ENUM.clazz))					return ENUM;
-		else if (clazz.equals(ENUM_VERSION.clazz)) return ENUM_VERSION;
-		else if (clazz.equals(EVENT_API.clazz)) return EVENT_API;
-		else if (clazz.equals(EVENT_API_VERSION.clazz)) return EVENT_API_VERSION;
-		else if (clazz.equals(EVENT_API_PRODUCT.clazz)) return EVENT_API_PRODUCT;
+		else if (clazz.equals(ENUM_VERSION.clazz))			return ENUM_VERSION;
+		else if (clazz.equals(EVENT_API.clazz))				return EVENT_API;
+		else if (clazz.equals(EVENT_API_VERSION.clazz))		return EVENT_API_VERSION;
+		else if (clazz.equals(EVENT_API_PRODUCT.clazz))		return EVENT_API_PRODUCT;
 		else if (clazz.equals(EVENT_API_PRODUCT_VERSION.clazz)) return EVENT_API_PRODUCT_VERSION;
-		else if (clazz.equals(CONSUMER.clazz)) return CONSUMER;
-		else if (clazz.equals(EVENT_MESH.clazz)) return EVENT_MESH;
-		else if (clazz.equals(TOPIC_DOMAIN.clazz)) return TOPIC_DOMAIN;
-		else if (clazz.equals(ENVIRONMENT.clazz)) return ENVIRONMENT;
+		else if (clazz.equals(CONSUMER.clazz))				return CONSUMER;
+		else if (clazz.equals(EVENT_MESH.clazz))			return EVENT_MESH;
+		else if (clazz.equals(TOPIC_DOMAIN.clazz))			return TOPIC_DOMAIN;
+		else if (clazz.equals(ENVIRONMENT.clazz))			return ENVIRONMENT;
+		else if (clazz.equals(CONFIGURATION.clazz))			return CONFIGURATION;
+		else if (clazz.equals(CONFIGURATION_TYPE.clazz))	return CONFIGURATION_TYPE;
+		else if (clazz.equals(CUSTOM_ATTRIBUTE.clazz))		return CUSTOM_ATTRIBUTE;
 		return N_A;
+	}
+	
+	private String buildPortalUrl(Object o) {
+		switch (this) {
+		case APPLICATION:
+//			Application
+			break;
+		case APPLICATION_VERSION:
+			break;
+		case CONFIGURATION:
+			break;
+		case CONFIGURATION_TYPE:
+			break;
+		case CONSUMER:
+			break;
+		case CUSTOM_ATTRIBUTE:
+			break;
+		case DOMAIN:
+			break;
+		case ENUM:
+			break;
+		case ENUM_VERSION:
+			break;
+		case ENVIRONMENT:
+			break;
+		case EVENT:
+			break;
+		case EVENT_API:
+			break;
+		case EVENT_API_PRODUCT:
+			break;
+		case EVENT_API_PRODUCT_VERSION:
+			break;
+		case EVENT_API_VERSION:
+			break;
+		case EVENT_MESH:
+			break;
+		case EVENT_VERSION:
+			break;
+		case N_A:
+			break;
+		case SCHEMA:
+			break;
+		case SCHEMA_VERSION:
+			break;
+		case STATE:
+			break;
+		case TOPIC_DOMAIN:
+			break;
+		case USER:
+			break;
+		default:
+			break;
+		
+		}
+		
+		
+		return "";
+		
 	}
 	
 	

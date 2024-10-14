@@ -73,7 +73,8 @@ public class LoaderTest {
     		}
     		System.out.println(allProducedEventsVersions.size());
     		System.out.println(allConsumedEventsVersions.size());
-    		System.out.println(domain.getStats().getEventCount());
+//    		System.out.println(domain.getStats().getEventCount());
+    		System.out.println(domain.getStats());
     		System.out.println();
     	}
     }
@@ -387,10 +388,11 @@ keySchemaPrimitiveType: null
     			continue;
     		}
     		for (SchemaObject schema : EventPortalWrapper.INSTANCE.getSchemasForDomainId(domain.getId())) {  // otherwise, for all schemas...
-    			o.printf(" |-> SCHEMA '%s':  type=%s, content=%s, # vers=%d, # events using=%d  [%s]%n",
+    			o.printf(" |-> SCHEMA '%s':  type=%s, shared=%s, # vers=%d, # events using=%d  [%s]%n",
     					schema.getName(),
     					schema.getSchemaType(),
-    					schema.getContentType().toUpperCase(),
+    					schema.getShared(),
+//    					schema.getContentType().toUpperCase(),
     					schema.getNumberOfVersions(),
     					schema.getEventVersionRefCount(),
     					schema.getId());
@@ -458,13 +460,30 @@ keySchemaPrimitiveType: null
     
     
 	@BeforeClass public static void load() {
+		System.out.println("LoaderTest.load() starting...");
     	Properties p = new Properties();
     	try {
 			p.load(new FileInputStream("token.properties"));
 			EventPortalWrapper.INSTANCE.setToken(p.getProperty("token"));
-			ExecutorService pool = Executors.newFixedThreadPool(8);
+
 			
-			if (!EventPortalWrapper.INSTANCE.loadAll()) {
+//			System.out.println(EventPortalWrapper.INSTANCE.getAsyncApiForAppVerId("oawbyn6fili", false));
+
+			
+//			System.out.println(EventPortalWrapper.INSTANCE.loadApplications(false));
+//
+//			System.out.println(EventPortalWrapper.INSTANCE.loadApplicationVersions());
+//
+//			System.out.println(EventPortalWrapper.INSTANCE.loadDomains());
+//
+//			System.out.println(EventPortalWrapper.INSTANCE.loadEventVersions());
+//
+//			System.exit(1);
+			
+			
+			ExecutorService pool = Executors.newFixedThreadPool(20);
+			
+			if (!EventPortalWrapper.INSTANCE.loadAll(pool)) {
 				System.err.println("COUldn't load!!!   " + EventPortalWrapper.INSTANCE.getLoadErrorString());
 				throw new RuntimeException(EventPortalWrapper.INSTANCE.getLoadErrorString().toString());
 			}
@@ -499,14 +518,14 @@ keySchemaPrimitiveType: null
         node.getChildCount();
         
         
-        test1("kdcce3vxdup");
-        test1("9imb4qc38rh");
-        test1("a7gf2ygh07z");
+//        test1("kdcce3vxdup");
+//        test1("9imb4qc38rh");
+//        test1("a7gf2ygh07z");
         
         
         
-        SchemaVersion sv = EventPortalWrapper.INSTANCE.getSchemaVersion("8uzd4xis5i9");
-        o.println(sv.getContent());
+//        SchemaVersion sv = EventPortalWrapper.INSTANCE.getSchemaVersion("8uzd4xis5i9");
+//        o.println(sv.getContent());
         
         final EventPortalWrapper EP = EventPortalWrapper.INSTANCE;
         

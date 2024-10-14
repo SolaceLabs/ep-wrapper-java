@@ -12,15 +12,13 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.squareup.okhttp.Call;
-import com.squareup.okhttp.OkHttpClient;
-import com.squareup.okhttp.Request;
-import com.squareup.okhttp.Response;
 
 import community.solace.ep.client.ApiClient;
 import community.solace.ep.client.ApiException;
@@ -30,8 +28,8 @@ import community.solace.ep.client.api.ApplicationsApi;
 import community.solace.ep.client.api.ConsumersApi;
 import community.solace.ep.client.api.EnumsApi;
 import community.solace.ep.client.api.EnvironmentsApi;
-import community.solace.ep.client.api.EventApIsApi;
 import community.solace.ep.client.api.EventApiProductsApi;
+import community.solace.ep.client.api.EventApisApi;
 import community.solace.ep.client.api.EventMeshesApi;
 import community.solace.ep.client.api.EventsApi;
 import community.solace.ep.client.api.SchemasApi;
@@ -73,11 +71,24 @@ import community.solace.ep.client.model.TopicAddressEnumVersionsResponse;
 import community.solace.ep.client.model.TopicAddressEnumsResponse;
 import community.solace.ep.client.model.TopicDomain;
 import community.solace.ep.client.model.TopicDomainsResponse;
+import community.solace.plat.client.api.UsersApi;
+import community.solace.plat.client.model.UserRequest;
+import community.solace.plat.client.model.UserResponse;
+import community.solace.plat.client.model.UsersResponseEnvelope;
+import dev.solace.aaron.useful.TimeUtils;
+import okhttp3.Call;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 public enum EventPortalWrapper {
 	
 	INSTANCE;  // singleton pattern
+
+	private static final Logger logger = LoggerFactory.getLogger(EventPortalWrapper.class);
+	
 	private static volatile boolean lazyLoadSchemaVers = false;  // not implemented yet!
+	private static String userAgent = "AaJavaEpWrapper/20241014";
 
     private static final int PAGE_SIZE = 50;
     
@@ -147,7 +158,7 @@ public enum EventPortalWrapper {
     }
     
     private LoadStatus loadStatus = LoadStatus.UNINITIALIZED;
-    private Set<String> loadErrorStrings = null;
+    private Set<String> loadErrorStrings = new HashSet<>();
 //    private Throwable loadException = null;
 	private long lastRefresh = 0L;
 		
@@ -182,6 +193,20 @@ public enum EventPortalWrapper {
     public void setToken(String token) {
     	this.token = token;
     }
+    
+    public String getUserAgent() {
+    	return userAgent;
+    }
+
+    /**
+     * This will append additional information onto the already configured User Agent.
+     * Call this before connecting.
+     * @param extra pass in the application name or something using this wrapper.
+     */
+    public void addUserAgentDetails(String extra) {
+    	userAgent += " " + extra;
+    }
+    
 
     /**
 	 * Loads all objects in parallel using ExecutorService.  If loading is unsuccessful, query `getLoadException()`
@@ -205,18 +230,25 @@ public enum EventPortalWrapper {
 		AtomicInteger num = new AtomicInteger(1);  // start the counter at one job, just to make sure the while loop below doesn't miss it
 //		pool.submit(() -> { loadDomains();		num.decrementAndGet(); });  // don't count first one
 //		pool.submit(() -> { num.incrementAndGet();	loadApplications();	num.decrementAndGet(); });
-		pool.submit(() -> { loadApplications();	num.decrementAndGet(); });
-		pool.submit(() -> { num.incrementAndGet();	loadEvents();		num.decrementAndGet(); });
-		pool.submit(() -> { num.incrementAndGet();	loadSchemas();		num.decrementAndGet(); });
-		pool.submit(() -> { num.incrementAndGet();	loadEnums();		num.decrementAndGet(); });
-		pool.submit(() -> { num.incrementAndGet();	loadEventApis();	num.decrementAndGet(); });
-		pool.submit(() -> { num.incrementAndGet();	loadEventApiProducts();	num.decrementAndGet(); });
-		pool.submit(() -> { num.incrementAndGet();	loadStates();		num.decrementAndGet(); });
-		pool.submit(() -> { num.incrementAndGet();	loadConsumers();	num.decrementAndGet(); });
-		pool.submit(() -> { num.incrementAndGet();	loadEventMeshes();	num.decrementAndGet(); });
-		pool.submit(() -> { num.incrementAndGet();	loadTopicDomains();	num.decrementAndGet(); });
-		pool.submit(() -> { num.incrementAndGet();	loadEnvironments();	num.decrementAndGet(); });
-		pool.submit(() -> { num.incrementAndGet();	loadUsersCustom();	num.decrementAndGet(); });
+		pool.submit(() -> { loadApplications(false);	num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadApplicationVersions();	num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadEvents(false);			num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadEventVersions();		num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadSchemas(false);			num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadSchemaVersions();		num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadEnums(false);			num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadEnumVersions();			num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadEventApis(false);		num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadEventApiVersions();		num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadEventApiProducts(false);	num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadEventApiProductVersions();	num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadStates();				num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadConsumers();			num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadEventMeshes();			num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadTopicDomains();			num.decrementAndGet(); });
+		pool.submit(() -> { num.incrementAndGet();	loadEnvironments();			num.decrementAndGet(); });
+//		pool.submit(() -> { num.incrementAndGet();	loadUsersCustom();			num.decrementAndGet(); });
+//		pool.submit(() -> { num.incrementAndGet();	loadUsers();			num.decrementAndGet(); });
 		while (num.get() > 0) {
 			try {
 				Thread.sleep(20);
@@ -287,6 +319,7 @@ public enum EventPortalWrapper {
 		}
 		if (!loadErrorStrings.isEmpty()) {
 	        System.err.println("EventPortalWrapper had issues loading: " + loadErrorStrings.toString());
+	        logger.warn("EventPortalWrapper had issues loading: " + loadErrorStrings.toString());
 			loadStatus = LoadStatus.ERROR;
 			return false;
 		} else {
@@ -390,6 +423,74 @@ public enum EventPortalWrapper {
 	        return true;
 		}
 	}
+
+	public void loadAsync(SupportedObjectType type, ExecutorService pool) {
+		pool.submit(() -> {
+//			num.incrementAndGet();
+			loadNew(type);
+//			num.decrementAndGet();
+		});
+
+	}
+
+	
+	public boolean loadNew(SupportedObjectType type) {
+		
+		switch (type) {
+		case APPLICATION:
+			return loadApplications(false);
+		case APPLICATION_VERSION:
+			return loadApplicationVersions();
+//		case CONFIGURATION:
+//			return loadConf
+//		case CONFIGURATION_TYPE:
+//			break;
+		case CONSUMER:
+			return loadConsumers();
+//		case CUSTOM_ATTRIBUTE:
+//			break;
+		case DOMAIN:
+			return loadDomains();
+		case ENUM:
+			return loadEnums(false);
+		case ENUM_VERSION:
+			return loadEnumVersions();
+		case ENVIRONMENT:
+			return loadEnvironments();
+		case EVENT:
+			return loadEvents(false);
+		case EVENT_API:
+			return loadEventApis(false);
+		case EVENT_API_PRODUCT:
+			return loadEventApiProducts(false);
+		case EVENT_API_PRODUCT_VERSION:
+			return loadEventApiProductVersions();
+		case EVENT_API_VERSION:
+			return loadEventApiVersions();
+		case EVENT_MESH:
+			return loadEventMeshes();
+		case EVENT_VERSION:
+			return loadEventVersions();
+		case SCHEMA:
+			return loadSchemas(false);
+		case SCHEMA_VERSION:
+			return loadSchemaVersions();
+		case STATE:
+			return loadStates();
+		case TOPIC_DOMAIN:
+			return loadTopicDomains();
+		case USER:
+			return loadUsers();
+		case N_A:
+		default:
+			return false;
+		
+		}
+		
+		
+	}
+	
+	
 	
     void afterLoadingTests() {
         System.out.println("##################################");
@@ -410,10 +511,26 @@ public enum EventPortalWrapper {
     
     public ApiClient getApiClient() {
 	  	ApiClient apiClient = Configuration.getDefaultApiClient();
-        apiClient.setBasePath("http://api.solace.cloud");
-        apiClient.setAccessToken(token);
-//        apiClient.setBearerToken(token);
+//        apiClient.setBasePath("https://solace-sso.solace.cloud");  // https://api.solace.cloud
+        apiClient.setBasePath("https://api.solace.cloud");  // https://api.solace.cloud
+//        apiClient.setAccessToken(token);  // nope
+//        apiClient.setApiKey(token);  // nope
+        apiClient.setBearerToken(token);
+        if (userAgent != null || !userAgent.isEmpty()) {
+        	apiClient.setUserAgent(userAgent);
+        }
         return apiClient;
+    }
+    
+    // different one for the platform API
+    public community.solace.plat.client.ApiClient getPlatApiClient() {
+    	community.solace.plat.client.ApiClient apiClient = community.solace.plat.client.Configuration.getDefaultApiClient();
+        apiClient.setBasePath("https://api.solace.cloud");  // https://api.solace.cloud
+    	apiClient.setBearerToken(token);
+        if (userAgent != null || !userAgent.isEmpty()) {
+        	apiClient.setUserAgent(userAgent);
+        }
+    	return apiClient;
     }
     
     /**
@@ -428,13 +545,15 @@ public enum EventPortalWrapper {
 	        ApplicationDomainsResponse response;
 	        int page = 1;
 	        do {
-	        	response = apiDomains.getApplicationDomains(PAGE_SIZE, page++, null, null, Collections.singletonList("stats"));
-//	        	response = apiDomains.getApplicationDomains(PAGE_SIZE, page++, null, null, Collections.singleton("stats"));
+	        	response = apiDomains.getApplicationDomains(PAGE_SIZE, page++, null, null, Collections.singleton("stats"));
+//	        	response = apiDomains.getApplicationDomains(PAGE_SIZE, page++, null, null, null);
 	        	for (ApplicationDomain domain : response.getData()) {
 	        		domains.put(domain.getId(), domain);
 	        	}
-	        } while (((Map<?, ?>)response.getMeta().get("pagination")).get("nextPage") != null);
-	        System.out.printf("loadDomains() loaded %d domains, and took %dms.%n", domains.size(), System.currentTimeMillis() - start);
+	        } while (response.getMeta().getPagination().getNextPage() != null);
+	        String log = String.format("loadDomains() loaded %d domains, and took %s", domains.size(), TimeUtils.formatDeltaMs(start));
+	        System.out.println(log);
+	        logger.info(log);
 	        return true;
     	} catch (ApiException e) {
             loadStatus = LoadStatus.ERROR;
@@ -448,6 +567,10 @@ public enum EventPortalWrapper {
     }
     
     public boolean loadApplications() {
+    	return loadApplications(true);
+    }
+    
+    public boolean loadApplications(boolean loadVersionsToo) {
         ApiClient apiClient = getApiClient();
     	try {
 	    	long start = System.currentTimeMillis();
@@ -457,7 +580,8 @@ public enum EventPortalWrapper {
 	        int page = 1;
 	        ApplicationsResponse response2;
 	        do {
-	        	response2 = apiApps.getApplications(PAGE_SIZE, page++, null, null, null, null, null);
+//	        	apiApps.getApplications(null, null, token, token, loadErrorStrings, token, token, token)
+	        	response2 = apiApps.getApplications(PAGE_SIZE, page++, null, null, null, null, null, null);
 	        	for (Application app : response2.getData()) {
 	        		applicationsById.put(app.getId(), app);
 	        		if (applicationsByDomainId.get(app.getApplicationDomainId()) == null) {
@@ -465,26 +589,13 @@ public enum EventPortalWrapper {
 	        		}
 	        		applicationsByDomainId.get(app.getApplicationDomainId()).add(app);
 	        	}
-	        } while (((Map<?, ?>)response2.getMeta().get("pagination")).get("nextPage") != null);
-	        
-	        // app versions
-	        applicationVersionsById = new LinkedHashMap<>();
-	        applicationVersionsByApplicationId = new LinkedHashMap<>();
-	        ApplicationVersionsResponse response3;
-	        page = 1;
-	        do {
-	        	response3 = apiApps.getApplicationVersions(PAGE_SIZE, page++, null);
-	            for (ApplicationVersion appVer : response3.getData()) {
-	            	applicationVersionsById.put(appVer.getId(), appVer);
-	            	if (applicationVersionsByApplicationId.get(appVer.getApplicationId()) == null) {
-	            		applicationVersionsByApplicationId.put(appVer.getApplicationId(), new LinkedHashSet<>());
-	            	}
-	            	applicationVersionsByApplicationId.get(appVer.getApplicationId()).add(appVer);
-	            }
-	        } while (((Map<?, ?>)response3.getMeta().get("pagination")).get("nextPage") != null);
-	        System.out.printf("loadApplications() loaded %d apps and %d versions, and took %dms.%n",
-	        		applicationsById.size(), applicationVersionsById.size(), System.currentTimeMillis() - start);
-    		return true;
+	        } while (response2.getMeta().getPagination().getNextPage() != null);
+	        String log = String.format("loadApplications() loaded %d apps, and took %s",
+	        		applicationsById.size(), TimeUtils.formatDeltaMs(start));
+	        System.out.println(log);
+	        logger.info(log);
+	        if (loadVersionsToo) return loadApplicationVersions();
+	        else return true;
     	} catch (ApiException e) {
             loadStatus = LoadStatus.ERROR;
             loadErrorStrings.add("Couldn't load Apps: " + e.getResponseBody());
@@ -496,17 +607,65 @@ public enum EventPortalWrapper {
     	}
     }
     
+    public boolean loadApplicationVersions() {
+    	return loadApplicationVersions(1, Integer.MAX_VALUE);
+    }
+
+    public boolean loadApplicationVersions(int pageStart, int pageNums) {
+    	pageStart = Math.max(1, pageStart);
+        ApiClient apiClient = getApiClient();
+    	try {
+	    	long start = System.currentTimeMillis();
+	    	int page = pageStart;
+	    	ApplicationsApi apiApps = new ApplicationsApi(apiClient);
+	        applicationVersionsById = new LinkedHashMap<>();
+	        applicationVersionsByApplicationId = new LinkedHashMap<>();
+	        ApplicationVersionsResponse response;
+	        do {
+	        	response = apiApps.getApplicationVersions(PAGE_SIZE, page++, null, null, null, null);
+	            for (ApplicationVersion appVer : response.getData()) {
+	            	applicationVersionsById.put(appVer.getId(), appVer);
+	            	if (applicationVersionsByApplicationId.get(appVer.getApplicationId()) == null) {
+	            		applicationVersionsByApplicationId.put(appVer.getApplicationId(), new LinkedHashSet<>());
+	            	}
+	            	applicationVersionsByApplicationId.get(appVer.getApplicationId()).add(appVer);
+	            }
+	            pageNums--;
+	        } while (pageNums > 0 && response.getMeta().getPagination().getNextPage() != null);
+	        String log = String.format("loadApplicationVersions() loaded %d versions, and took %s",
+	        		applicationVersionsById.size(), TimeUtils.formatDeltaMs(start));
+//	        System.out.println(log);
+	        logger.info(log);
+    		return true;
+    	} catch (ApiException e) {
+            loadStatus = LoadStatus.ERROR;
+            loadErrorStrings.add("Couldn't load AppVersions: " + e.getResponseBody());
+    		return false;
+    	} catch (Throwable e) {
+            loadStatus = LoadStatus.ERROR;
+            loadErrorStrings.add("Couldn't load AppVersions: " + e.toString());
+    		return false;
+    	}
+    }
+    
     public boolean loadEvents() {
+    	return loadEvents(true);
+    }
+
+    public boolean loadEvents(boolean loadVersionsToo) {
         ApiClient apiClient = getApiClient();
     	try {
 	    	eventsById = new LinkedHashMap<>();
 	    	eventsByDomainId = new LinkedHashMap<>();
 	    	long start = System.currentTimeMillis();
 	        EventsApi eventsApi = new EventsApi(apiClient);
+	        apiClient.setReadTimeout(20000);
 	        EventsResponse eventsReponse;
 	        int page = 1;
 	        do {
-	        	eventsReponse = eventsApi.getEvents(PAGE_SIZE, page++, null, null, null, null, null, null);
+//	        	long pageTime = System.currentTimeMillis();
+//	        	System.out.print("Fetching Events page " + page + "... ");
+	        	eventsReponse = eventsApi.getEvents(PAGE_SIZE, page++, null, null, null, null, null, null, null, null);
 		        for (Event event : eventsReponse.getData()) {
 		        	eventsById.put(event.getId(), event);
 		        	if (eventsByDomainId.get(event.getApplicationDomainId()) == null) {
@@ -514,15 +673,48 @@ public enum EventPortalWrapper {
 		        	}
 		        	eventsByDomainId.get(event.getApplicationDomainId()).add(event);
 		        }
-	        } while (((Map<?, ?>)eventsReponse.getMeta().get("pagination")).get("nextPage") != null);
-	    	
-	        // event versions
+//	        	System.out.printf("took %d ms, %d total events fetched%n", System.currentTimeMillis()-pageTime, eventsById.size());
+	        } while (eventsReponse.getMeta().getPagination().getNextPage() != null);
+	        String log = String.format("loadEvents() loaded %d events, and took %s",
+	        		eventsById.size(), TimeUtils.formatDeltaMs(start));
+//	        System.out.println(log);
+	        logger.info(log);
+	        if (loadVersionsToo) return loadEventVersions();
+	        else return true;
+    	} catch (ApiException e) {
+//    		e.printStackTrace();
+//    		System.err.println(e.getResponseBody());
+    		logger.warn("Caught during loadEvents()", e);
+            loadStatus = LoadStatus.ERROR;
+            loadErrorStrings.add("Couldn't load Events: " + e.getResponseBody());
+    		return false;
+    	} catch (Throwable e) {
+    		logger.warn("Caught during loadEvents()", e);
+//    		e.printStackTrace();
+            loadStatus = LoadStatus.ERROR;
+            loadErrorStrings.add("Couldn't load Events: " + e.toString());
+    		return false;
+    	}
+    }
+
+    public boolean loadEventVersions() {
+    	return loadEventVersions(1, Integer.MAX_VALUE);
+    }
+
+    public boolean loadEventVersions(int pageStart, int pageNums) {
+    	pageStart = Math.max(1, pageStart);
+        ApiClient apiClient = getApiClient();
+    	try {
+    		long start = System.currentTimeMillis();
+    		int page = pageStart;
+    		EventsApi eventsApi = new EventsApi(apiClient);
 	        eventVersionsById = new LinkedHashMap<>();
 	        eventVersionsByEventId = new LinkedHashMap<>();
 	        EventVersionsResponse eventVersionsResponse;
-	        page = 1;
 	        do {
-	        	eventVersionsResponse = eventsApi.getEventVersions(PAGE_SIZE, page++, null);
+//	        	long pageTime = System.currentTimeMillis();
+//	        	System.out.print("Fetching Event Versions page " + page + "... ");
+	        	eventVersionsResponse = eventsApi.getEventVersions(PAGE_SIZE, page++, null, null, null, null, null);
 	        	for (EventVersion eventVersion : eventVersionsResponse.getData()) {
 	        		eventVersionsById.put(eventVersion.getId(), eventVersion);
 	        		if (eventVersionsByEventId.get(eventVersion.getEventId()) == null) {
@@ -530,22 +722,32 @@ public enum EventPortalWrapper {
 	        		}
 	        		eventVersionsByEventId.get(eventVersion.getEventId()).add(eventVersion);
 	        	}
-	        } while (((Map<?, ?>)eventVersionsResponse.getMeta().get("pagination")).get("nextPage") != null);
-	        System.out.printf("loadEvents() loaded %d events and %d versions, and took %dms.%n",
-	        		eventsById.size(), eventVersionsById.size(), System.currentTimeMillis() - start);
+	        	pageNums--;
+//	        	System.out.printf("took %s, %d total event versions fetched%n", TimeUtils.formatDeltaMs(pageTime), eventVersionsById.size());
+	        } while (pageNums > 0 && eventVersionsResponse.getMeta().getPagination().getNextPage() != null);
+	        String log = String.format("loadEventVersions() loaded %d versions, and took %s",
+	        		eventVersionsById.size(), TimeUtils.formatDeltaMs(start));
+//	        System.out.println(log);
+	        logger.info(log);
     		return true;
     	} catch (ApiException e) {
+    		logger.warn("Caught during loadEventVersions(): " + e.getResponseBody(), e);
             loadStatus = LoadStatus.ERROR;
-            loadErrorStrings.add("Couldn't load Events: " + e.getResponseBody());
+            loadErrorStrings.add("Couldn't load EventVersions: " + e.getResponseBody());
     		return false;
     	} catch (Throwable e) {
+    		logger.warn("Caught during loadEventVersions()", e);
             loadStatus = LoadStatus.ERROR;
-            loadErrorStrings.add("Couldn't load Events: " + e.toString());
+            loadErrorStrings.add("Couldn't load EventVersions: " + e.toString());
     		return false;
     	}
     }
     
     public boolean loadSchemas() {
+    	return loadSchemas(true);
+    }
+    
+    public boolean loadSchemas(boolean loadVersionsToo) {
         ApiClient apiClient = getApiClient();
     	try {
 	    	long start = System.currentTimeMillis();
@@ -555,7 +757,7 @@ public enum EventPortalWrapper {
 	        SchemasResponse schemasReponse;
 	        int page = 1;
 	        do {
-	        	schemasReponse = schemasApi.getSchemas(PAGE_SIZE, page++, null, null, null, null, null, null);
+	        	schemasReponse = schemasApi.getSchemas(PAGE_SIZE, page++, null, null, null, null, null, null, null, null);
 		        for (SchemaObject schema : schemasReponse.getData()) {
 		        	schemasById.put(schema.getId(), schema);
 		        	if (schemasByDomainId.get(schema.getApplicationDomainId()) == null) {
@@ -563,28 +765,13 @@ public enum EventPortalWrapper {
 		        	}
 		        	schemasByDomainId.get(schema.getApplicationDomainId()).add(schema);
 		        }
-	        } while (((Map<?, ?>)schemasReponse.getMeta().get("pagination")).get("nextPage") != null);
-	        
-	        // schemas versions
-	        schemaVersionsById = new LinkedHashMap<>();
-	        schemaVersionsBySchemaId = new LinkedHashMap<>();
-	        if (!lazyLoadSchemaVers) {  // else we'll try and get them on-demand
-		        SchemaVersionsResponse schemaVersionsResponse;
-		        page = 1;
-		        do {
-		        	schemaVersionsResponse = schemasApi.getSchemaVersions(PAGE_SIZE, page++, null);
-		        	for (SchemaVersion schemaVersion : schemaVersionsResponse.getData()) {
-		        		schemaVersionsById.put(schemaVersion.getId(), schemaVersion);
-		        		if (schemaVersionsBySchemaId.get(schemaVersion.getSchemaId()) == null) {
-		        			schemaVersionsBySchemaId.put(schemaVersion.getSchemaId(), new LinkedHashSet<>());
-		        		}
-		        		schemaVersionsBySchemaId.get(schemaVersion.getSchemaId()).add(schemaVersion);
-		        	}
-		        } while (((Map<?, ?>)schemaVersionsResponse.getMeta().get("pagination")).get("nextPage") != null);
-	        }
-	        System.out.printf("loadSchema() loaded %d schemas and %d versions, and took %dms.%n",
-	        		schemasById.size(), schemaVersionsById.size(), System.currentTimeMillis() - start);
-    		return true;
+	        } while (schemasReponse.getMeta().getPagination().getNextPage() != null);
+	        String log = String.format("loadSchemas() loaded %d schemas, and took %s",
+	        		schemasById.size(), TimeUtils.formatDeltaMs(start));
+//	        System.out.println(log);
+	        logger.info(log);
+	        if (loadVersionsToo) return loadSchemaVersions();
+	        else return true;
     	} catch (ApiException e) {
             loadStatus = LoadStatus.ERROR;
             loadErrorStrings.add("Couldn't load Schemas: " + e.getResponseBody());
@@ -595,8 +782,49 @@ public enum EventPortalWrapper {
     		return false;
     	}
     }
+
+    public boolean loadSchemaVersions() {
+        ApiClient apiClient = getApiClient();
+    	try {
+	    	long start = System.currentTimeMillis();
+	        SchemasApi schemasApi = new SchemasApi(apiClient);
+	        int page = 1;
+	        schemaVersionsById = new LinkedHashMap<>();
+	        schemaVersionsBySchemaId = new LinkedHashMap<>();
+	        if (!lazyLoadSchemaVers) {  // else we'll try and get them on-demand
+		        SchemaVersionsResponse schemaVersionsResponse;
+		        do {
+		        	schemaVersionsResponse = schemasApi.getSchemaVersions(PAGE_SIZE, page++, null, null, null);
+		        	for (SchemaVersion schemaVersion : schemaVersionsResponse.getData()) {
+		        		schemaVersionsById.put(schemaVersion.getId(), schemaVersion);
+		        		if (schemaVersionsBySchemaId.get(schemaVersion.getSchemaId()) == null) {
+		        			schemaVersionsBySchemaId.put(schemaVersion.getSchemaId(), new LinkedHashSet<>());
+		        		}
+		        		schemaVersionsBySchemaId.get(schemaVersion.getSchemaId()).add(schemaVersion);
+		        	}
+		        } while (schemaVersionsResponse.getMeta().getPagination().getNextPage() != null);
+	        }
+	        String log = String.format("loadSchemaVersions() loaded %d versions, and took %s",
+	        		schemaVersionsById.size(), TimeUtils.formatDeltaMs(start));
+//	        System.out.println(log);
+	        logger.info(log);
+    		return true;
+    	} catch (ApiException e) {
+            loadStatus = LoadStatus.ERROR;
+            loadErrorStrings.add("Couldn't load SchemaVersions: " + e.getResponseBody());
+    		return false;
+    	} catch (Throwable e) {
+            loadStatus = LoadStatus.ERROR;
+            loadErrorStrings.add("Couldn't load SchemaVersions: " + e.toString());
+    		return false;
+    	}
+    }
     
     public boolean loadEnums() {
+    	return loadEnums(true);
+    }
+    
+    public boolean loadEnums(boolean loadVersionsToo) {
         ApiClient apiClient = getApiClient();
     	try {
 	    	enumsById = new LinkedHashMap<>();
@@ -606,7 +834,7 @@ public enum EventPortalWrapper {
 	        TopicAddressEnumsResponse enumsReponse;
 	        int page = 1;
 	        do {
-	        	enumsReponse = enumsApi.getEnums(PAGE_SIZE, page++, null, null, null, null, null, null);
+	        	enumsReponse = enumsApi.getEnums(PAGE_SIZE, page++, null, null, null, null, null, null, null);
 		        for (TopicAddressEnum topicAddressEnum : enumsReponse.getData()) {
 		        	enumsById.put(topicAddressEnum.getId(), topicAddressEnum);
 		        	if (enumsByDomainId.get(topicAddressEnum.getApplicationDomainId()) == null) {
@@ -614,26 +842,13 @@ public enum EventPortalWrapper {
 		        	}
 		        	enumsByDomainId.get(topicAddressEnum.getApplicationDomainId()).add(topicAddressEnum);
 		        }
-	        } while (((Map<?, ?>)enumsReponse.getMeta().get("pagination")).get("nextPage") != null);
-	    	
-	        // enum versions
-	        enumVersionsById = new LinkedHashMap<>();
-	        enumVersionsByEnumId = new LinkedHashMap<>();
-	        TopicAddressEnumVersionsResponse enumVersionsResponse;
-	        page = 1;
-	        do {
-	        	enumVersionsResponse = enumsApi.getEnumVersions(PAGE_SIZE, page++, null);
-	        	for (TopicAddressEnumVersion enumVersion : enumVersionsResponse.getData()) {
-	        		enumVersionsById.put(enumVersion.getId(), enumVersion);
-	        		if (enumVersionsByEnumId.get(enumVersion.getEnumId()) == null) {
-	        			enumVersionsByEnumId.put(enumVersion.getEnumId(), new LinkedHashSet<>());
-	        		}
-	        		enumVersionsByEnumId.get(enumVersion.getEnumId()).add(enumVersion);
-	        	}
-	        } while (((Map<?, ?>)enumVersionsResponse.getMeta().get("pagination")).get("nextPage") != null);
-	        System.out.printf("loadEnums() loaded %d enums and %d versions, and took %dms.%n",
-	        		enumsById.size(), enumVersionsById.size(), System.currentTimeMillis() - start);
-    		return true;
+	        } while (enumsReponse.getMeta().getPagination().getNextPage() != null);
+	        String log = String.format("loadEnums() loaded %d enums, and took %s",
+	        		enumsById.size(), TimeUtils.formatDeltaMs(start));
+//	        System.out.println(log);
+	        logger.info(log);
+	        if (loadVersionsToo) return loadEnumVersions();
+	        else return true;
     	} catch (ApiException e) {
             loadStatus = LoadStatus.ERROR;
             loadErrorStrings.add("Couldn't load Enums: " + e.getResponseBody());
@@ -645,17 +860,55 @@ public enum EventPortalWrapper {
     	}
     }
     
+    public boolean loadEnumVersions() {
+        ApiClient apiClient = getApiClient();
+    	try {
+	    	enumsById = new LinkedHashMap<>();
+	    	enumsByDomainId = new LinkedHashMap<>();
+	    	long start = System.currentTimeMillis();
+	        EnumsApi enumsApi = new EnumsApi(apiClient);
+	        int page = 1;
+	        TopicAddressEnumVersionsResponse enumVersionsResponse;
+	        do {
+	        	enumVersionsResponse = enumsApi.getEnumVersions(PAGE_SIZE, page++, null, null);
+	        	for (TopicAddressEnumVersion enumVersion : enumVersionsResponse.getData()) {
+	        		enumVersionsById.put(enumVersion.getId(), enumVersion);
+	        		if (enumVersionsByEnumId.get(enumVersion.getEnumId()) == null) {
+	        			enumVersionsByEnumId.put(enumVersion.getEnumId(), new LinkedHashSet<>());
+	        		}
+	        		enumVersionsByEnumId.get(enumVersion.getEnumId()).add(enumVersion);
+	        	}
+	        } while (enumVersionsResponse.getMeta().getPagination().getNextPage() != null);
+	        String log = String.format("loadEnumVersions() loaded %d versions, and took %s",
+	        		enumVersionsById.size(), TimeUtils.formatDeltaMs(start));
+//	        System.out.println(log);
+	        logger.info(log);
+    		return true;
+    	} catch (ApiException e) {
+            loadStatus = LoadStatus.ERROR;
+            loadErrorStrings.add("Couldn't load EnumVersions: " + e.getResponseBody());
+    		return false;
+    	} catch (Throwable e) {
+            loadStatus = LoadStatus.ERROR;
+            loadErrorStrings.add("Couldn't load EnumVersions: " + e.toString());
+    		return false;
+    	}
+    }
     public boolean loadEventApis() {
+    	return loadEventApis(true);
+    }
+    
+    public boolean loadEventApis(boolean loadVersionsToo) {
         ApiClient apiClient = getApiClient();
     	try {
 	    	long start = System.currentTimeMillis();
 	    	eventApisById = new LinkedHashMap<>();
 	    	eventApisByDomainId = new LinkedHashMap<>();
-	    	EventApIsApi eventApisApi = new EventApIsApi(apiClient);
+	    	EventApisApi eventApisApi = new EventApisApi(apiClient);
 	        EventApisResponse eventApisReponse;
 	        int page = 1;
 	        do {
-	        	eventApisReponse = eventApisApi.getEventApis(PAGE_SIZE, page++, null, null, null, null, null, null, null);
+	        	eventApisReponse = eventApisApi.getEventApis(PAGE_SIZE, page++, null, null, null, null, null, null, null, null, null, null);
 		        for (EventApi eventApi : eventApisReponse.getData()) {
 		        	eventApisById.put(eventApi.getId(), eventApi);
 		        	if (eventApisByDomainId.get(eventApi.getApplicationDomainId()) == null) {
@@ -664,25 +917,12 @@ public enum EventPortalWrapper {
 		        	eventApisByDomainId.get(eventApi.getApplicationDomainId()).add(eventApi);
 		        }
 	        } while (eventApisReponse.getMeta().getPagination().getNextPage() != null);
-	        
-	        // event API versions
-	        eventApiVersionsById = new LinkedHashMap<>();
-	        eventApiVersionsByEventApiId = new LinkedHashMap<>();
-	        EventApiVersionsResponse eventApiVersionsResponse;
-	        page = 1;
-	        do {
-	        	eventApiVersionsResponse = eventApisApi.getEventApiVersions(PAGE_SIZE, page++, null, null, null);
-	        	for (EventApiVersion eventApiVersion : eventApiVersionsResponse.getData()) {
-	        		eventApiVersionsById.put(eventApiVersion.getId(), eventApiVersion);
-	        		if (eventApiVersionsByEventApiId.get(eventApiVersion.getEventApiId()) == null) {
-	        			eventApiVersionsByEventApiId.put(eventApiVersion.getEventApiId(), new LinkedHashSet<>());
-	        		}
-	        		eventApiVersionsByEventApiId.get(eventApiVersion.getEventApiId()).add(eventApiVersion);
-	        	}
-	        } while (eventApisReponse.getMeta().getPagination().getNextPage() != null);
-	        System.out.printf("loadEventApis() loaded %d Event APIs and %d versions, and took %dms.%n",
-	        		eventApisById.size(), eventApiVersionsById.size(), System.currentTimeMillis() - start);
-    		return true;
+	        String log = String.format("loadEventApis() loaded %d Event APIs, and took %s",
+	        		eventApisById.size(), TimeUtils.formatDeltaMs(start));
+//	        System.out.println(log);
+	        logger.info(log);
+	        if (loadVersionsToo) return loadEventApiVersions();
+	        else return true;
     	} catch (ApiException e) {
             loadStatus = LoadStatus.ERROR;
             loadErrorStrings.add("Couldn't load Event APIs: " + e.getResponseBody());
@@ -694,7 +934,46 @@ public enum EventPortalWrapper {
     	}
     }
 
+    public boolean loadEventApiVersions() {
+        ApiClient apiClient = getApiClient();
+    	try {
+	    	long start = System.currentTimeMillis();
+	    	EventApisApi eventApisApi = new EventApisApi(apiClient);
+	        int page = 1;
+	        eventApiVersionsById = new LinkedHashMap<>();
+	        eventApiVersionsByEventApiId = new LinkedHashMap<>();
+	        EventApiVersionsResponse eventApiVersionsResponse;
+	        do {
+	        	eventApiVersionsResponse = eventApisApi.getEventApiVersions(PAGE_SIZE, page++, null, null, null, null, null);
+	        	for (EventApiVersion eventApiVersion : eventApiVersionsResponse.getData()) {
+	        		eventApiVersionsById.put(eventApiVersion.getId(), eventApiVersion);
+	        		if (eventApiVersionsByEventApiId.get(eventApiVersion.getEventApiId()) == null) {
+	        			eventApiVersionsByEventApiId.put(eventApiVersion.getEventApiId(), new LinkedHashSet<>());
+	        		}
+	        		eventApiVersionsByEventApiId.get(eventApiVersion.getEventApiId()).add(eventApiVersion);
+	        	}
+	        } while (eventApiVersionsResponse.getMeta().getPagination().getNextPage() != null);
+	        String log = String.format("loadEventApiVersions() loaded %d versions, and took %s",
+	        		eventApiVersionsById.size(), TimeUtils.formatDeltaMs(start));
+//	        System.out.println(log);
+	        logger.info(log);
+    		return true;
+    	} catch (ApiException e) {
+            loadStatus = LoadStatus.ERROR;
+            loadErrorStrings.add("Couldn't load Event API Versions: " + e.getResponseBody());
+    		return false;
+    	} catch (Throwable e) {
+            loadStatus = LoadStatus.ERROR;
+            loadErrorStrings.add("Couldn't load Event API Versions: " + e.toString());
+    		return false;
+    	}
+    }
+    
     public boolean loadEventApiProducts() {
+    	return loadEventApiProducts(true);
+    }
+
+    public boolean loadEventApiProducts(boolean loadVersionsToo) {
         ApiClient apiClient = getApiClient();
     	try {
 	    	long start = System.currentTimeMillis();
@@ -704,9 +983,8 @@ public enum EventPortalWrapper {
 	        EventApiProductsResponse eventApiProductsReponse;
 	        int page = 1;
 	        do {
-	        	eventApiProductsReponse = eventApiProductsApi.getEventApiProducts(PAGE_SIZE, page++, null, null, null, null, null, null, null);
+	        	eventApiProductsReponse = eventApiProductsApi.getEventApiProducts(PAGE_SIZE, page++, null, null, null, null, null, null, null, null);
 		        for (EventApiProduct eventApiProduct : eventApiProductsReponse.getData()) {
-//		        	System.out.println(eventApiProduct);
 		        	eventApiProductsById.put(eventApiProduct.getId(), eventApiProduct);
 		        	if (eventApiProductsByDomainId.get(eventApiProduct.getApplicationDomainId()) == null) {
 		        		eventApiProductsByDomainId.put(eventApiProduct.getApplicationDomainId(), new LinkedHashSet<>());
@@ -714,26 +992,12 @@ public enum EventPortalWrapper {
 		        	eventApiProductsByDomainId.get(eventApiProduct.getApplicationDomainId()).add(eventApiProduct);
 		        }
 	        } while (eventApiProductsReponse.getMeta().getPagination().getNextPage() != null);
-	        
-	        // event API versions
-	        eventApiProductVersionsById = new LinkedHashMap<>();
-	        eventApiProductVersionsByEventApiProductId = new LinkedHashMap<>();
-	        EventApiProductVersionsResponse eventApiProductVersionsResponse;
-	        page = 1;
-	        do {
-	        	eventApiProductVersionsResponse = eventApiProductsApi.getEventApiProductVersions(PAGE_SIZE, page++, null, null, null, null);
-	        	for (EventApiProductVersion eventApiProductVersion : eventApiProductVersionsResponse.getData()) {
-//	        		System.out.println(eventApiProductVersion);
-	        		eventApiProductVersionsById.put(eventApiProductVersion.getId(), eventApiProductVersion);
-	        		if (eventApiProductVersionsByEventApiProductId.get(eventApiProductVersion.getEventApiProductId()) == null) {
-	        			eventApiProductVersionsByEventApiProductId.put(eventApiProductVersion.getEventApiProductId(), new LinkedHashSet<>());
-	        		}
-	        		eventApiProductVersionsByEventApiProductId.get(eventApiProductVersion.getEventApiProductId()).add(eventApiProductVersion);
-	        	}
-	        } while (eventApiProductsReponse.getMeta().getPagination().getNextPage() != null);
-	        System.out.printf("loadEventApiProducts() loaded %d Event API Products and %d versions, and took %dms.%n",
-	        		eventApiProductsById.size(), eventApiProductVersionsById.size(), System.currentTimeMillis() - start);
-    		return true;
+	        String log = String.format("loadEventApiProducts() loaded %d Event API Products, and took %s",
+	        		eventApiProductsById.size(), TimeUtils.formatDeltaMs(start));
+//	        System.out.println(log);
+	        logger.info(log);
+	        if (loadVersionsToo) return loadEventApiProductVersions();
+	        else return true;
     	} catch (ApiException e) {
             loadStatus = LoadStatus.ERROR;
             loadErrorStrings.add("Couldn't load Event API Products: " + e.getResponseBody());
@@ -745,6 +1009,42 @@ public enum EventPortalWrapper {
     	}
     }
     
+    public boolean loadEventApiProductVersions() {
+        ApiClient apiClient = getApiClient();
+    	try {
+	    	long start = System.currentTimeMillis();
+	    	eventApiProductsById = new LinkedHashMap<>();
+	    	eventApiProductsByDomainId = new LinkedHashMap<>();
+	    	EventApiProductsApi eventApiProductsApi = new EventApiProductsApi(apiClient);
+	        int page = 1;
+	        EventApiProductVersionsResponse eventApiProductVersionsResponse;
+	        do {
+	        	eventApiProductVersionsResponse = eventApiProductsApi.getEventApiProductVersions(PAGE_SIZE, page++, null, null, null, null, null, null, null, null, null);
+	        	for (EventApiProductVersion eventApiProductVersion : eventApiProductVersionsResponse.getData()) {
+//	        		System.out.println(eventApiProductVersion);
+	        		eventApiProductVersionsById.put(eventApiProductVersion.getId(), eventApiProductVersion);
+	        		if (eventApiProductVersionsByEventApiProductId.get(eventApiProductVersion.getEventApiProductId()) == null) {
+	        			eventApiProductVersionsByEventApiProductId.put(eventApiProductVersion.getEventApiProductId(), new LinkedHashSet<>());
+	        		}
+	        		eventApiProductVersionsByEventApiProductId.get(eventApiProductVersion.getEventApiProductId()).add(eventApiProductVersion);
+	        	}
+	        } while (eventApiProductVersionsResponse.getMeta().getPagination().getNextPage() != null);
+	        String log = String.format("loadEventApiProductVersions() loaded %d versions, and took %s",
+	        		eventApiProductVersionsById.size(), TimeUtils.formatDeltaMs(start));
+//	        System.out.println(log);
+	        logger.info(log);
+    		return true;
+    	} catch (ApiException e) {
+            loadStatus = LoadStatus.ERROR;
+            loadErrorStrings.add("Couldn't load Event API Product Versions: " + e.getResponseBody());
+    		return false;
+    	} catch (Throwable e) {
+            loadStatus = LoadStatus.ERROR;
+            loadErrorStrings.add("Couldn't load Event API Product Versions: " + e.toString());
+    		return false;
+    	}
+    }
+
     public boolean loadStates() {
         ApiClient apiClient = getApiClient();
     	try {
@@ -756,8 +1056,10 @@ public enum EventPortalWrapper {
 	        for (StateDTO state : statesResponse.getData()) {
 	        	statesById.put(state.getId(), state);
 	        }
-	        System.out.printf("loadStates() loaded %d states, and took %dms.%n",
-	        		statesById.size(), System.currentTimeMillis() - start);
+	        String log = String.format("loadStates() loaded %d states, and took %s",
+	        		statesById.size(), TimeUtils.formatDeltaMs(start));
+//	        System.out.println(log);
+	        logger.info(log);
     		return true;
     	} catch (ApiException e) {
             loadStatus = LoadStatus.ERROR;
@@ -788,9 +1090,11 @@ public enum EventPortalWrapper {
 		        	}
 		        	consumersByApplicationVersionId.get(consumer.getApplicationVersionId()).add(consumer);
 		        }
-	        } while (((Map<?, ?>)consumersReponse.getMeta().get("pagination")).get("nextPage") != null);
-	        System.out.printf("loadConsumers() loaded %d Consumers, and took %dms.%n",
-	        		consumersById.size(), System.currentTimeMillis() - start);
+	        } while (consumersReponse.getMeta().getPagination().getNextPage() != null);
+	        String log = String.format("loadConsumers() loaded %d Consumers, and took %s",
+	        		consumersById.size(), TimeUtils.formatDeltaMs(start));
+//	        System.out.println(log);
+	        logger.info(log);
     		return true;
     	} catch (ApiException e) {
             loadStatus = LoadStatus.ERROR;
@@ -813,7 +1117,7 @@ public enum EventPortalWrapper {
 	        EventMeshesResponse eventMeshesReponse;
 	        int page = 1;
 	        do {
-	        	eventMeshesReponse = eventMeshesApi.getEventMeshes(PAGE_SIZE, page++, null, null);
+	        	eventMeshesReponse = eventMeshesApi.getEventMeshes(PAGE_SIZE, page++, null, null, null);
 		        for (EventMesh eventMesh : eventMeshesReponse.getData()) {
 		        	eventMeshesById.put(eventMesh.getId(), eventMesh);
 		        	if (eventMeshesByEnvironmentId.get(eventMesh.getEnvironmentId()) == null) {
@@ -825,9 +1129,11 @@ public enum EventPortalWrapper {
 //		        	}
 //		        	eventMeshesByBrokerType.get(eventMesh.getBrokerType()).add(eventMesh);
 		        }
-	        } while (((Map<?, ?>)eventMeshesReponse.getMeta().get("pagination")).get("nextPage") != null);
-	        System.out.printf("loadEventMeshes() loaded %d Event Meshes, and took %dms.%n",
-	        		eventMeshesById.size(), System.currentTimeMillis() - start);
+	        } while (eventMeshesReponse.getMeta().getPagination().getNextPage() != null);
+	        String log = String.format("loadEventMeshes() loaded %d Event Meshes, and took %s",
+	        		eventMeshesById.size(), TimeUtils.formatDeltaMs(start));
+//	        System.out.println(log);
+	        logger.info(log);
     		return true;
     	} catch (ApiException e) {
             loadStatus = LoadStatus.ERROR;
@@ -861,8 +1167,11 @@ public enum EventPortalWrapper {
 //		        	}
 //		           	topicDomainsByBrokerType.get(topicDomain.getBrokerType()).add(topicDomain);
 		        }
-	        } while (((Map<?, ?>)topicDomainsReponse.getMeta().get("pagination")).get("nextPage") != null);
-	        System.out.printf("loadTopicDomains() loaded %d Topic Domains, and took %dms.%n", topicDomainsByDomainId.size(), System.currentTimeMillis() - start);
+	        } while (topicDomainsReponse.getMeta().getPagination().getNextPage() != null);
+	        String log = String.format("loadTopicDomains() loaded %d Topic Domains, and took %s",
+	        		topicDomainsByDomainId.size(), TimeUtils.formatDeltaMs(start));
+//	        System.out.println(log);
+	        logger.info(log);
     		return true;
     	} catch (ApiException e) {
             loadStatus = LoadStatus.ERROR;
@@ -884,12 +1193,15 @@ public enum EventPortalWrapper {
 	        EnvironmentsResponse environmentsReponse;
 	        int page = 1;
 	        do {
-	        	environmentsReponse = environmentsApi.getEnvironments(PAGE_SIZE, page++, null, null);
+	        	environmentsReponse = environmentsApi.getEnvironments(PAGE_SIZE, page++, null, null, null);
 		        for (Environment environment : environmentsReponse.getData()) {
 		        	environmentsById.put(environment.getId(), environment);
 		        }
-	        } while (((Map<?, ?>)environmentsReponse.getMeta().get("pagination")).get("nextPage") != null);
-	        System.out.printf("loadEnvironments() loaded %d Environments, and took %dms.%n", environmentsById.size(), System.currentTimeMillis() - start);
+	        } while (environmentsReponse.getMeta().getPagination().getNextPage() != null);
+	        String log = String.format("loadEnvironments() loaded %d Environments, and took %s",
+	        		environmentsById.size(), TimeUtils.formatDeltaMs(start));
+//	        System.out.println(log);
+	        logger.info(log);
     		return true;
     	} catch (ApiException e) {
             loadStatus = LoadStatus.ERROR;
@@ -918,7 +1230,7 @@ public enum EventPortalWrapper {
 		Call call = client.newCall(request);
 		try {
 			Response response = call.execute();
-            System.out.printf("fetchUsers() took %dms for HTTP call.%n", System.currentTimeMillis() - start);
+//            System.out.printf("fetchUsers() took %s for HTTP call.%n", TimeUtils.formatDeltaMs(start));
             start = System.currentTimeMillis();
 			if (response.code() == 200) {
 	            char[] buffer = new char[8 * 1024];
@@ -928,7 +1240,9 @@ public enum EventPortalWrapper {
                 	sb.append(buffer, 0, charsRead);
                 }
                 JsonObject jo = new Gson().fromJson(sb.toString(), JsonObject.class);
-                System.out.printf("fetchUsers() took %dms to deserialize into JSON object.%n", System.currentTimeMillis() - start);
+                String log = String.format("fetchUsers() took %s to deserialize into JSON object.", TimeUtils.formatDeltaMs(start));
+//    	        System.out.println(log);
+    	        logger.info(log);
                 if (jo.has("data")) {
                 	JsonArray ar = jo.get("data").getAsJsonArray();
                 	for (int i=0; i<ar.size(); i++) {
@@ -990,12 +1304,52 @@ public enum EventPortalWrapper {
     	if (page == -1) {
     		return false;
     	}
-        System.out.printf("loadUsersCustom() loaded %d Users, and took %dms.%n", userNamesById.size(), System.currentTimeMillis() - start);
+        System.out.printf("loadUsersCustom() loaded %d Users, and took %s%n", userNamesById.size(), TimeUtils.formatDeltaMs(start));
 //        System.out.println(userNamesById.keySet());
     	return true;
     }
     
     
+    public boolean loadUsers() {
+        community.solace.plat.client.ApiClient apiClient = getPlatApiClient();
+    	try {
+	    	long start = System.currentTimeMillis();
+	    	userNamesById = new LinkedHashMap<>();
+	    	UsersApi usersApi = new UsersApi(apiClient);
+	        UsersResponseEnvelope response;
+	        UserRequest req = new UserRequest();  // what's the point of this?
+	        int page = 1;
+	        do {
+	        	response = usersApi.getUsers(req, page++, PAGE_SIZE);
+	        	for (UserResponse user : response.getData()) {
+	        		String name = user.getFirstName() + " " + user.getLastName();
+	        		if (name.equals("null null")) {
+	        			name = user.getEmail();
+	        		}
+	        		userNamesById.put(user.getId(), name);
+//	        		System.out.println(name);
+	        	}
+	        } while (((Map<?, ?>)response.getMeta().get("pagination")).get("nextPage") != null);
+	        String log = String.format("loadUsers() loaded %d users, and took %s",
+	        		userNamesById.size(), TimeUtils.formatDeltaMs(start));
+//	        System.out.println(log);
+	        logger.info(log);
+    		return true;
+    	} catch (community.solace.plat.client.ApiException e) {
+    		e.printStackTrace();
+            loadStatus = LoadStatus.ERROR;
+            loadErrorStrings.add(e.getResponseBody());
+    		return false;
+    	} catch (Throwable e) {
+    		e.printStackTrace();
+            loadStatus = LoadStatus.ERROR;
+            loadErrorStrings.add(e.toString());
+    		return false;
+    	}
+    	
+    	
+    	
+    }
     
 
     
@@ -1353,39 +1707,46 @@ public enum EventPortalWrapper {
 		int i = (int)(Math.random() * userNamesById.size());
 		return userNamesById.values().stream().skip(i).findAny().orElse(null);
 	}
-	
+
+
 	public String getAsyncApiForAppVerId(String appVerId, boolean prettyPrint) {
 		ApiClient apiClient = getApiClient();
 		ApplicationsApi api = new ApplicationsApi(apiClient);
 //		api.getAsyncApiForApplicationVersion(appVer.getId(), "json", "2.0.0");
 		try {
-			Object treeMap = api.getAsyncApiForApplicationVersion(appVerId, null, null);
-			if (prettyPrint) {
-				String json = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(treeMap);
-				return json;
-			} else {
-				String json = new Gson().toJson(treeMap);
-				return json;
-			}
+			String s = api.getAsyncApiForApplicationVersion(appVerId, "json", null, null, "2.5.0", null, null, null, null, null);
+//			if (prettyPrint) {
+//				String json = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(s);
+//				return json;
+//			} else {
+//				String json = new Gson().toJson(s);
+//				return json;
+//			}
+			return s;
 		} catch (ApiException e) {
 			System.err.println(e.getResponseBody());
 			return null;
 		}
 	}
-	
+
+
+
 	public String getAsyncApiForEventApiVerId(String eventApiVerId, boolean prettyPrint) {
 		ApiClient apiClient = getApiClient();
-		EventApIsApi api = new EventApIsApi(apiClient);
+		EventApisApi api = new EventApisApi(apiClient);
 //		api.getAsyncApiForApplicationVersion(appVer.getId(), "json", "2.0.0");
 		try {
-			Object treeMap = api.getAsyncApiForEventApiVersion(eventApiVerId, null, null, null);
-			if (prettyPrint) {
-				String json = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(treeMap);
-				return json;
-			} else {
-				String json = new Gson().toJson(treeMap);
-				return json;
-			}
+			String s = api.getAsyncApiForEventApiVersion(eventApiVerId, null, "json", null, "2.5.0", null, null, null);
+			return s;
+//			api.getAsyncApiForEv
+//			Object treeMap = api.getAsyncApiForEventApiVersion(eventApiVerId, null, null, null, null, null, null, null);
+//			if (prettyPrint) {
+//				String json = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(treeMap);
+//				return json;
+//			} else {
+//				String json = new Gson().toJson(treeMap);
+//				return json;
+//			}
 		} catch (ApiException e) {
 			System.err.println(e.getResponseBody());
 			return null;
